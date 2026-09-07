@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test",
+    "test": "node --test tests/engine.test.js",
     "test:demo": "node tests/live-demo.js",
     "test:mobile": "node tests/test-mobile-viewports.js"
   },

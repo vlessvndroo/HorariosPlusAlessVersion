@@ -123,11 +123,11 @@ export function CourseSelectionTab({
                           : 'border-slate-800/80 bg-slate-900/40 text-slate-300 hover:border-slate-700 hover:bg-slate-900/80'
                       }`}
                     >
-                      <div className="pr-3 flex-1">
+                      <div className="pr-2 flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold leading-tight text-slate-100">{course.name}</p>
+                          <p className="font-semibold leading-tight text-slate-100 break-words text-xs sm:text-sm">{course.name}</p>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
                           <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
                             {course.id}
                           </span>
@@ -145,13 +145,13 @@ export function CourseSelectionTab({
                         </div>
                       </div>
 
-                      <div className="flex items-center">
+                      <div className="flex items-center flex-shrink-0 ml-2">
                         <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition ${
                           isSelected
                             ? 'bg-indigo-600 border-indigo-500 text-white'
                             : 'border-slate-700 bg-slate-950 group-hover:border-slate-600'
                         }`}>
-                          {isSelected && <span className="text-xs">✓</span>}
+                          {isSelected && <span className="text-xs font-bold">✓</span>}
                         </div>
                       </div>
                     </div>
