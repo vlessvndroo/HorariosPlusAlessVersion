@@ -1,0 +1,2326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Horarios UCAB - Ingeniería Informática & Psicología</title>
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & Babel CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- html2canvas for 1-click image download -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Scrollbar personalizada */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0f19; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+    @media print {
+      body { background: white !important; color: black !important; }
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      .grid-calendar { border: 1px solid #ccc !important; }
+    }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen antialiased selection:bg-indigo-500 selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
+
+    // HORAS REDONDAS EN FORMATO 24 HORAS (SIN FRACCIONES NI AM/PM)
+    const ROUND_HOURS_24H = [
+      '07:00', '08:00', '09:00', '10:00',
+      '11:00', '12:00', '13:00', '14:00',
+      '15:00', '16:00', '17:00', '18:00',
+      '19:00', '20:00', '21:00', '22:00'
+    ];
+
+    const DAYS = [
+      { key: 'LUN', label: 'Lunes', short: 'Lun' },
+      { key: 'MAR', label: 'Martes', short: 'Mar' },
+      { key: 'MIE', label: 'Miércoles', short: 'Mié' },
+      { key: 'JUE', label: 'Jueves', short: 'Jue' },
+      { key: 'VIE', label: 'Viernes', short: 'Vie' },
+      { key: 'SAB', label: 'Sábado', short: 'Sáb' },
+      { key: 'DOM', label: 'Domingo (Virtuales)', short: 'Dom (Virtual)' }
+    ];
+
+    // =========================================================================
+    // CARRERA 1: INGENIERÍA INFORMÁTICA (UCAB - 8 Semestres)
+    // =========================================================================
+    const CURRICULUM_INFORMATICA = [
+      {
+        semester: 1,
+        courses: [
+          { id: 'FING-02001', name: 'Álgebra y Trigonometría', defaultMode: 'standard' },
+          { id: 'FACE-02001', name: 'Competencia Textual en Español', defaultMode: 'standard' },
+          { id: 'IDIO-02001', name: 'Inglés', defaultMode: 'standard' },
+          { id: 'INFO-02001', name: 'Lógica', defaultMode: 'standard' },
+          { id: 'INFO-02002', name: 'Estrategia y Proyección Profesional', defaultMode: 'standard' },
+          { id: 'CIEL-02001', name: 'Identidad, Liderazgo y Compromiso I', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 2,
+        courses: [
+          { id: 'FING-02101', name: 'Cálculo Diferencial', defaultMode: 'standard' },
+          { id: 'FING-02003', name: 'Álgebra Lineal', defaultMode: 'standard' },
+          { id: 'IDIO-02002', name: 'Inglés Técnico', defaultMode: 'virtual' },
+          { id: 'INFO-02003', name: 'Matemáticas Discretas', defaultMode: 'standard' },
+          { id: 'INFO-02004', name: 'Algoritmos y Programación', defaultMode: 'standard' },
+          { id: 'CIEL-02002', name: 'Identidad, Liderazgo y Compromiso II', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 3,
+        courses: [
+          { id: 'FING-02004', name: 'Cálculo Integral', defaultMode: 'standard' },
+          { id: 'FING-02115', name: 'Mecánica', defaultMode: 'theory_practice' },
+          { id: 'INFO-02005', name: 'Organización del Computador', defaultMode: 'standard' },
+          { id: 'FACE-00024', name: 'Contabilidad Financiera', defaultMode: 'standard' },
+          { id: 'INFO-02006', name: 'Algoritmos y Estructuras de Datos', defaultMode: 'standard' },
+          { id: 'INFO-02007', name: 'Sistemas de Información', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 4,
+        courses: [
+          { id: 'FING-02105', name: 'Cálculo Vectorial', defaultMode: 'standard' },
+          { id: 'FING-02011', name: 'Probabilidad y Estadística', defaultMode: 'standard' },
+          { id: 'INFO-02008', name: 'Sistemas Operativos', defaultMode: 'standard' },
+          { id: 'FING-02016', name: 'Ingeniería Económica', defaultMode: 'standard' },
+          { id: 'INFO-02009', name: 'Programación Orientada a Objetos', defaultMode: 'standard' },
+          { id: 'INFO-02010', name: 'Ingeniería de Software', defaultMode: 'standard' },
+          { id: 'CSOC-02001', name: 'Ecología, Ambiente y Sustentabilidad', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 5,
+        courses: [
+          { id: 'FING-02107', name: 'Ecuaciones Diferenciales Ordinarias', defaultMode: 'standard' },
+          { id: 'FING-02006', name: 'Electricidad y Magnetismo', defaultMode: 'theory_practice' },
+          { id: 'INFO-02011', name: 'Redes de Comunicación de Datos', defaultMode: 'theory_practice' },
+          { id: 'INFO-02012', name: 'Gestión de Proyectos de Software', defaultMode: 'standard' },
+          { id: 'INFO-02013', name: 'Tópicos Especiales de Programación', defaultMode: 'standard' },
+          { id: 'INFO-02014', name: 'Diseño de Experiencia de Usuario', defaultMode: 'standard' },
+          { id: 'INFO-02104', name: 'Sistemas de Bases de Datos', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 6,
+        courses: [
+          { id: 'FING-02010', name: 'Métodos Numéricos', defaultMode: 'standard' },
+          { id: 'INFO-02016', name: 'Arquitectura del Computador Aplicada', defaultMode: 'standard' },
+          { id: 'INFO-02017', name: 'Ciberseguridad Ofensiva', defaultMode: 'theory_practice' },
+          { id: 'INFO-02018', name: 'Aseguramiento de la Calidad del Software', defaultMode: 'standard' },
+          { id: 'INFO-02019', name: 'Ingeniería de Requisitos', defaultMode: 'standard' },
+          { id: 'INFO-02020', name: 'Inteligencia de Negocios', defaultMode: 'standard' },
+          { id: 'INFO-02021', name: 'Tópicos Especiales para la Gestión de Datos', defaultMode: 'standard' },
+          { id: 'SOC-02001',  name: 'Servicio Comunitario', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 7,
+        courses: [
+          { id: 'INFO-02022', name: 'Investigación de Operaciones', defaultMode: 'standard' },
+          { id: 'INFO-02023', name: 'Inteligencia Artificial: Aprendizaje Automático', defaultMode: 'standard' },
+          { id: 'INFO-02024', name: 'Ciberseguridad Defensiva', defaultMode: 'standard' },
+          { id: 'INFO-02025', name: 'Computación en la Nube', defaultMode: 'theory_practice' },
+          { id: 'INFO-02026', name: 'Desarrollo de Software', defaultMode: 'standard' },
+          { id: 'INFO-02102', name: 'Pasantía', defaultMode: 'standard' },
+          { id: 'ELEC-02001', name: 'Electiva (Informática)', defaultMode: 'standard' },
+          { id: 'FACE-02002', name: 'Innovación y Emprendimiento', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 8,
+        courses: [
+          { id: 'INFO-02027', name: 'Evaluación de Sistemas Informáticos', defaultMode: 'virtual' },
+          { id: 'HUM-02001',  name: 'Ética Profesional', defaultMode: 'virtual' },
+          { id: 'INFO-02028', name: 'Arquitecturas Empresariales', defaultMode: 'virtual' },
+          { id: 'INFO-02029', name: 'Curso de Trabajo de Grado', defaultMode: 'virtual' },
+          { id: 'INFO-02030', name: 'Trabajo de Grado (TG)', defaultMode: 'standard' },
+          { id: 'ELEC-02002', name: 'Electiva (Complementaria)', defaultMode: 'standard' }
+        ]
+      }
+    ];
+
+    // =========================================================================
+    // CARRERA 2: PSICOLOGÍA (UCAB - 8 Semestres)
+    // =========================================================================
+    const CURRICULUM_PSICOLOGIA = [
+      {
+        semester: 1,
+        courses: [
+          { id: 'UCAB-00009', name: 'Competencia Textual en Español', defaultMode: 'standard' },
+          { id: 'PSIC-02000', name: 'Fundamentos Epistemológicos y Antropológicos de la Psicología', defaultMode: 'standard' },
+          { id: 'UCAB-00001', name: 'Identidad, Liderazgo y Compromiso I', defaultMode: 'standard' },
+          { id: 'PSIC-00066', name: 'Introducción a la Investigación', defaultMode: 'standard' },
+          { id: 'PSIC-00065', name: 'Introducción al Estudio de la Psicología', defaultMode: 'standard' },
+          { id: 'PSIC-00124', name: 'Matemática y Probabilidad', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 2,
+        courses: [
+          { id: 'PSIC-02026', name: 'Estadística Descriptiva', defaultMode: 'standard' },
+          { id: 'UCAB-00002', name: 'Identidad, Liderazgo y Compromiso II', defaultMode: 'standard' },
+          { id: 'PSIC-00071', name: 'Investigación Documental', defaultMode: 'standard' },
+          { id: 'PSIC-02001', name: 'Neuropsicobiología', defaultMode: 'theory_practice' },
+          { id: 'PSIC-00073', name: 'Psicología de la Sensopercepción y de la Atención', defaultMode: 'standard' },
+          { id: 'PSIC-00122', name: 'Psicología del Desarrollo de la Niñez', defaultMode: 'standard' },
+          { id: 'PSIC-00070', name: 'Teorías y Sistemas en Psicología', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 3,
+        courses: [
+          { id: 'UCAB-00003', name: 'Ecología, Ambiente y Sustentabilidad', defaultMode: 'standard' },
+          { id: 'PSIC-02027', name: 'Estadística Inferencial', defaultMode: 'standard' },
+          { id: 'UCAB-00008', name: 'Innovación y Emprendimiento', defaultMode: 'virtual' },
+          { id: 'PSIC-02002', name: 'Neurociencia Conductual', defaultMode: 'theory_practice' },
+          { id: 'PSIC-02003', name: 'Psicología de la Motivación y Emoción', defaultMode: 'standard' },
+          { id: 'PSIC-02004', name: 'Psicología del Aprendizaje', defaultMode: 'standard' },
+          { id: 'PSIC-02005', name: 'Psicología del Desarrollo de la Adolescencia y de la Adultez', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 4,
+        courses: [
+          { id: 'PSIC-02007', name: 'Investigación Cualitativa', defaultMode: 'standard' },
+          { id: 'PSIC-00077', name: 'Investigación Cuantitativa No Experimental', defaultMode: 'standard' },
+          { id: 'PSIC-02008', name: 'Neuropsicología y Neurociencias Cognitivas', defaultMode: 'standard' },
+          { id: 'PSIC-02009', name: 'Psicología de la Memoria y de la Inteligencia', defaultMode: 'standard' },
+          { id: 'PSIC-02010', name: 'Psicología del Pensamiento y Lenguaje', defaultMode: 'standard' },
+          { id: 'PSIC-02011', name: 'Psicología Social', defaultMode: 'standard' },
+          { id: 'PSIC-02006', name: 'Psicometría', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 5,
+        courses: [
+          { id: 'PSIC-02012', name: 'Evaluación Psicológica de la Niñez', defaultMode: 'standard' },
+          { id: 'PSIC-02013', name: 'Psicología de Grupos', defaultMode: 'standard' },
+          { id: 'PSIC-02014', name: 'Psicología de la Personalidad', defaultMode: 'standard' },
+          { id: 'PSIC-02015', name: 'Psicología Experimental', defaultMode: 'standard' },
+          { id: 'PSIC-02016', name: 'Psicología Social Aplicada', defaultMode: 'standard' },
+          { id: 'PSIC-00097', name: 'Psicopatología de la Niñez y de la Adolescencia', defaultMode: 'standard' },
+          { id: 'FHYE-02001', name: 'Electiva I (Humanidades y Educación)', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 6,
+        courses: [
+          { id: 'PSIC-02017', name: 'Evaluación Psicológica de la Adolescencia', defaultMode: 'standard' },
+          { id: 'PSIC-00108', name: 'Psicología Clínica de la Niñez y de la Adolescencia', defaultMode: 'standard' },
+          { id: 'PSIC-02019', name: 'Psicología del Personal y del Trabajo', defaultMode: 'standard' },
+          { id: 'PSIC-00096', name: 'Psicología Escolar', defaultMode: 'standard' },
+          { id: 'PSIC-00100', name: 'Psicopatología de la Adultez', defaultMode: 'standard' },
+          { id: 'FHYE-02002', name: 'Electiva II (Humanidades y Educación)', defaultMode: 'standard' },
+          { id: 'PSIC-00107', name: 'Trabajo de Grado I', defaultMode: 'standard' },
+          { id: 'SOC-02001',  name: 'Servicio Comunitario', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 7,
+        courses: [
+          { id: 'PSIC-00109', name: 'Asesoramiento Psicológico', defaultMode: 'standard' },
+          { id: 'PSIC-02020', name: 'Evaluación Psicológica de la Adultez', defaultMode: 'standard' },
+          { id: 'PSIC-00113', name: 'Pasantías de Psicología Clínica de la Niñez y de la Adolescencia', defaultMode: 'standard' },
+          { id: 'PSIC-02018', name: 'Pasantías de Psicología Escolar', defaultMode: 'standard' },
+          { id: 'PSIC-00112', name: 'Psicología Clínica de la Adultez', defaultMode: 'standard' },
+          { id: 'PSIC-02021', name: 'Psicología Organizacional', defaultMode: 'standard' },
+          { id: 'PSIC-00111', name: 'Trabajo de Grado II', defaultMode: 'standard' }
+        ]
+      },
+      {
+        semester: 8,
+        courses: [
+          { id: 'PSIC-00116', name: 'Crítica a los Sistemas Psicológicos', defaultMode: 'standard' },
+          { id: 'PSIC-00117', name: 'Ética Profesional', defaultMode: 'standard' },
+          { id: 'PSIC-02022', name: 'Pasantías de Asesoramiento Psicológico Comunitario', defaultMode: 'standard' },
+          { id: 'PSIC-02025', name: 'Pasantías de Asesoramiento Psicológico Individual y Grupal', defaultMode: 'standard' },
+          { id: 'PSIC-02023', name: 'Pasantías de Psicología Clínica de la Adultez en Servicios Comunitarios', defaultMode: 'standard' },
+          { id: 'PSIC-02024', name: 'Pasantías de Psicología Clínica de la Adultez en Servicios Hospitalarios', defaultMode: 'standard' },
+          { id: 'FHYE-02003', name: 'Electiva III (Humanidades y Educación)', defaultMode: 'standard' },
+          { id: 'PSIC-00119', name: 'Trabajo de Grado III', defaultMode: 'standard' }
+        ]
+      }
+    ];
+
+    const CAREERS = {
+      informatica: {
+        id: 'informatica',
+        name: 'Ingeniería Informática',
+        shortName: 'Informática',
+        icon: '💻',
+        faculty: 'Facultad de Ingeniería',
+        description: 'Plan oficial de 8 semestres para Ingeniería Informática en la UCAB.',
+        curriculum: CURRICULUM_INFORMATICA
+      },
+      psicologia: {
+        id: 'psicologia',
+        name: 'Psicología',
+        shortName: 'Psicología',
+        icon: '🧠',
+        faculty: 'Facultad de Humanidades y Educación',
+        description: 'Plan de estudios oficial de 8 semestres para la Escuela de Psicología en la UCAB.',
+        curriculum: CURRICULUM_PSICOLOGIA
+      }
+    };
+
+    const PALETTES = [
+      { bg: 'bg-blue-600/90', border: 'border-blue-400', badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
+      { bg: 'bg-emerald-600/90', border: 'border-emerald-400', badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+      { bg: 'bg-purple-600/90', border: 'border-purple-400', badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
+      { bg: 'bg-amber-600/90', border: 'border-amber-400', badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+      { bg: 'bg-rose-600/90', border: 'border-rose-400', badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30' },
+      { bg: 'bg-cyan-600/90', border: 'border-cyan-400', badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
+      { bg: 'bg-indigo-600/90', border: 'border-indigo-400', badge: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
+      { bg: 'bg-teal-600/90', border: 'border-teal-400', badge: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
+      { bg: 'bg-fuchsia-600/90', border: 'border-fuchsia-400', badge: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' },
+      { bg: 'bg-orange-600/90', border: 'border-orange-400', badge: 'bg-orange-500/20 text-orange-300 border-orange-500/30' }
+    ];
+
+    function timeToDec(timeStr) {
+      if (!timeStr || typeof timeStr !== 'string') return 7.0;
+      const [h, m] = timeStr.split(':').map(Number);
+      return (isNaN(h) ? 7 : h) + (isNaN(m) ? 0 : m) / 60;
+    }
+
+    function decToTime(dec) {
+      const h = Math.floor(dec);
+      const m = Math.round((dec - h) * 60);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    function slotsOverlap(s1, s2) {
+      if (!s1 || !s2 || s1.day !== s2.day) return false;
+      const start1 = timeToDec(s1.start);
+      const end1 = timeToDec(s1.end);
+      const start2 = timeToDec(s2.start);
+      const end2 = timeToDec(s2.end);
+      return Math.max(start1, start2) < Math.min(end1, end2);
+    }
+
+    function checkConflict(candidateSlots, placedItems) {
+      for (const item of placedItems) {
+        if (item.isVirtual) continue;
+        for (const slot1 of candidateSlots) {
+          for (const slot2 of item.schedule) {
+            if (slotsOverlap(slot1, slot2)) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    // (Sin materias preseleccionadas por defecto)
+
+    function App() {
+      // Estado de Carrera Activa (siempre inicia en null para solicitar carrera antes de desplegar nada)
+      const [activeCareerId, setActiveCareerId] = useState(null);
+
+      // Estado por carrera activa
+      const [selectedCourses, setSelectedCourses] = useState([]);
+      const [customCourses, setCustomCourses] = useState([]);
+      const [courseOffer, setCourseOffer] = useState({});
+
+      const [activeTab, setActiveTab] = useState('courses');
+      const [searchFilter, setSearchFilter] = useState('');
+      const [selectedSemester, setSelectedSemester] = useState('all');
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [copiedNotification, setCopiedNotification] = useState(false);
+      const [isExportingImage, setIsExportingImage] = useState(false);
+
+      // Estado para nueva materia personalizada
+      const [showNewCourseModal, setShowNewCourseModal] = useState(false);
+      const [newCourseCode, setNewCourseCode] = useState('');
+      const [newCourseName, setNewCourseName] = useState('');
+      const [newCourseMode, setNewCourseMode] = useState('standard');
+
+      // Guardar datos específicos de la carrera activa
+      useEffect(() => {
+        if (activeCareerId) {
+          localStorage.setItem(`horarios_courses_${activeCareerId}_v7`, JSON.stringify(selectedCourses));
+        }
+      }, [selectedCourses, activeCareerId]);
+
+      useEffect(() => {
+        if (activeCareerId) {
+          localStorage.setItem(`horarios_custom_${activeCareerId}_v7`, JSON.stringify(customCourses));
+        }
+      }, [customCourses, activeCareerId]);
+
+      useEffect(() => {
+        if (activeCareerId) {
+          localStorage.setItem(`horarios_offer_${activeCareerId}_v7`, JSON.stringify(courseOffer));
+        }
+      }, [courseOffer, activeCareerId]);
+
+      // Función para seleccionar o cambiar de carrera (arranca sin materias preseleccionadas)
+      const selectCareer = (careerId) => {
+        const savedCourses = localStorage.getItem(`horarios_courses_${careerId}_v7`);
+        const savedCustom = localStorage.getItem(`horarios_custom_${careerId}_v7`);
+        const savedOffer = localStorage.getItem(`horarios_offer_${careerId}_v7`);
+
+        setActiveCareerId(careerId);
+        setSelectedCourses(savedCourses ? JSON.parse(savedCourses) : []);
+        setCustomCourses(savedCustom ? JSON.parse(savedCustom) : []);
+        setCourseOffer(savedOffer ? JSON.parse(savedOffer) : {});
+        setCurrentIndex(0);
+        setSelectedSemester('all');
+        setSearchFilter('');
+        setActiveTab('courses');
+      };
+
+      const currentCareer = activeCareerId ? CAREERS[activeCareerId] : null;
+
+      // Catálogo de materias para la carrera activa
+      const allAvailableCourses = useMemo(() => {
+        if (!currentCareer) return [];
+        const list = [];
+        currentCareer.curriculum.forEach(sem => {
+          sem.courses.forEach(c => list.push({ ...c, semester: sem.semester, isCustom: false }));
+        });
+        customCourses.forEach(c => list.push({ ...c, semester: 'Personalizada', isCustom: true }));
+        return list;
+      }, [currentCareer, customCourses]);
+
+      const createDefaultOfferForMode = (mode) => {
+        if (mode === 'virtual') {
+          return {
+            mode: 'virtual',
+            virtualSections: [
+              { nrc: '', sectionName: 'Sec V1', prof: '' }
+            ]
+          };
+        } else if (mode === 'theory_practice') {
+          return {
+            mode: 'theory_practice',
+            theoryGroups: [
+              {
+                id: 'tg-' + Date.now(),
+                theoryNrc: '',
+                theorySectionName: 'Teoría 1',
+                theoryProf: '',
+                theorySchedule: [{ day: 'LUN', start: '07:00', end: '09:00' }],
+                practices: [
+                  {
+                    id: 'p-' + Date.now(),
+                    practiceNrc: '',
+                    practiceSectionName: 'Práctica 1',
+                    practiceProf: '',
+                    practiceSchedule: [{ day: 'MIE', start: '07:00', end: '09:00' }]
+                  }
+                ]
+              }
+            ]
+          };
+        } else {
+          return {
+            mode: 'standard',
+            sections: [
+              {
+                nrc: '',
+                sectionName: 'Sec 1',
+                prof: '',
+                schedule: [{ day: 'LUN', start: '07:00', end: '09:00' }]
+              }
+            ]
+          };
+        }
+      };
+
+      const toggleCourse = (course) => {
+        setCurrentIndex(0);
+        setSelectedCourses(prev => {
+          const exists = prev.some(c => c.id === course.id);
+          if (exists) {
+            return prev.filter(c => c.id !== course.id);
+          } else {
+            const initialMode = course.defaultMode || 'standard';
+            if (!courseOffer[course.id]) {
+              setCourseOffer(prevOffer => ({
+                ...prevOffer,
+                [course.id]: createDefaultOfferForMode(initialMode)
+              }));
+            }
+            return [...prev, { id: course.id, name: course.name, mode: initialMode }];
+          }
+        });
+      };
+
+      const changeCourseMode = (courseId, newMode) => {
+        setSelectedCourses(prev => prev.map(c => c.id === courseId ? { ...c, mode: newMode } : c));
+        setCourseOffer(prev => ({
+          ...prev,
+          [courseId]: createDefaultOfferForMode(newMode)
+        }));
+      };
+
+      const handleCreateCustomCourse = (e) => {
+        e.preventDefault();
+        const codeTrim = newCourseCode.trim().toUpperCase();
+        const nameTrim = newCourseName.trim();
+        if (!codeTrim || !nameTrim) return;
+
+        if (allAvailableCourses.some(c => c.id === codeTrim)) {
+          alert('Ya existe una materia con ese código.');
+          return;
+        }
+
+        const newCourse = { id: codeTrim, name: nameTrim, defaultMode: newCourseMode, isCustom: true };
+        setCustomCourses(prev => [...prev, newCourse]);
+        setSelectedCourses(prev => [...prev, { id: codeTrim, name: nameTrim, mode: newCourseMode }]);
+        setCourseOffer(prev => ({
+          ...prev,
+          [codeTrim]: createDefaultOfferForMode(newCourseMode)
+        }));
+
+        setNewCourseCode('');
+        setNewCourseName('');
+        setShowNewCourseModal(false);
+      };
+
+      // Operaciones Estándar
+      const addStandardSection = (courseId) => {
+        const offer = courseOffer[courseId] || createDefaultOfferForMode('standard');
+        const sections = offer.sections || [];
+        const nextNum = sections.length + 1;
+        setCourseOffer(prev => ({
+          ...prev,
+          [courseId]: {
+            ...offer,
+            sections: [
+              ...sections,
+              {
+                nrc: '',
+                sectionName: `Sec ${nextNum}`,
+                prof: '',
+                schedule: [{ day: 'MAR', start: '09:00', end: '11:00' }]
+              }
+            ]
+          }
+        }));
+      };
+
+      const removeStandardSection = (courseId, secIdx) => {
+        const offer = courseOffer[courseId];
+        const sections = (offer.sections || []).filter((_, idx) => idx !== secIdx);
+        setCourseOffer(prev => ({ ...prev, [courseId]: { ...offer, sections } }));
+      };
+
+      const updateStandardSectionField = (courseId, secIdx, field, value) => {
+        const offer = { ...courseOffer[courseId] };
+        offer.sections[secIdx][field] = value;
+        setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+      };
+
+      const addStandardSlot = (courseId, secIdx) => {
+        const offer = { ...courseOffer[courseId] };
+        offer.sections[secIdx].schedule.push({ day: 'MIE', start: '07:00', end: '09:00' });
+        setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+      };
+
+      const removeStandardSlot = (courseId, secIdx, slotIdx) => {
+        const offer = { ...courseOffer[courseId] };
+        if (offer.sections[secIdx].schedule.length <= 1) return;
+        offer.sections[secIdx].schedule = offer.sections[secIdx].schedule.filter((_, idx) => idx !== slotIdx);
+        setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+      };
+
+      const updateStandardSlot = (courseId, secIdx, slotIdx, field, value) => {
+        const offer = { ...courseOffer[courseId] };
+        offer.sections[secIdx].schedule[slotIdx][field] = value;
+        setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+      };
+
+      // Operaciones Teoría + Práctica
+      const addTheoryGroup = (courseId) => {
+        const offer = courseOffer[courseId] || createDefaultOfferForMode('theory_practice');
+        const groups = offer.theoryGroups || [];
+        const nextNum = groups.length + 1;
+        setCourseOffer(prev => ({
+          ...prev,
+          [courseId]: {
+            ...offer,
+            theoryGroups: [
+              ...groups,
+              {
+                id: 'tg-' + Date.now(),
+                theoryNrc: '',
+                theorySectionName: `Teoría ${nextNum}`,
+                theoryProf: '',
+                theorySchedule: [{ day: 'MAR', start: '09:00', end: '11:00' }],
+                practices: [
+                  {
+                    id: 'p-' + Date.now(),
+                    practiceNrc: '',
+                    practiceSectionName: 'Práctica 1',
+                    practiceProf: '',
+                    practiceSchedule: [{ day: 'JUE', start: '09:00', end: '11:00' }]
+                  }
+                ]
+              }
+            ]
+          }
+        }));
+      };
+
+      const removeTheoryGroup = (courseId, tgIdx) => {
+        const offer = courseOffer[courseId];
+        const groups = (offer.theoryGroups || []).filter((_, idx) => idx !== tgIdx);
+        setCourseOffer(prev => ({ ...prev, [courseId]: { ...offer, theoryGroups: groups } }));
+      };
+
+      const updateTheoryField = (courseId, tgIdx, field, value) => {
+        const offer = { ...courseOffer[courseId] };
+        offer.theoryGroups[tgIdx][field] = value;
+        setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+      };
+
+      const addPracticeToTheory = (courseId, tgIdx) => {
+        const offer = { ...courseOffer[courseId] };
+        const tg = offer.theoryGroups[tgIdx];
+        const nextNum = tg.practices.length + 1;
+        tg.practices.push({
+          id: 'p-' + Date.now(),
+          practiceNrc: '',
+          practiceSectionName: `Práctica ${nextNum}`,
+          practiceProf: '',
+          practiceSchedule: [{ day: 'VIE', start: '07:00', end: '09:00' }]
+        });
+        setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+      };
+
+      const removePracticeFromTheory = (courseId, tgIdx, pIdx) => {
+        const offer = { ...courseOffer[courseId] };
+        if (offer.theoryGroups[tgIdx].practices.length <= 1) return;
+        offer.theoryGroups[tgIdx].practices = offer.theoryGroups[tgIdx].practices.filter((_, idx) => idx !== pIdx);
+        setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+      };
+
+      const updatePracticeField = (courseId, tgIdx, pIdx, field, value) => {
+        const offer = { ...courseOffer[courseId] };
+        offer.theoryGroups[tgIdx].practices[pIdx][field] = value;
+        setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+      };
+
+      // Operaciones Virtuales
+      const addVirtualSection = (courseId) => {
+        const offer = courseOffer[courseId] || createDefaultOfferForMode('virtual');
+        const list = offer.virtualSections || [];
+        const nextNum = list.length + 1;
+        setCourseOffer(prev => ({
+          ...prev,
+          [courseId]: {
+            ...offer,
+            virtualSections: [
+              ...list,
+              { nrc: '', sectionName: `Sec V${nextNum}`, prof: '' }
+            ]
+          }
+        }));
+      };
+
+      const removeVirtualSection = (courseId, vIdx) => {
+        const offer = courseOffer[courseId];
+        const list = (offer.virtualSections || []).filter((_, idx) => idx !== vIdx);
+        setCourseOffer(prev => ({ ...prev, [courseId]: { ...offer, virtualSections: list } }));
+      };
+
+      const updateVirtualSection = (courseId, vIdx, field, value) => {
+        const offer = { ...courseOffer[courseId] };
+        offer.virtualSections[vIdx][field] = value;
+        setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+      };
+
+      const resetAllData = () => {
+        if (confirm(`¿Deseas limpiar todas las materias y NRCs cargados para ${currentCareer.name}?`)) {
+          setSelectedCourses([]);
+          setCourseOffer({});
+          setCustomCourses([]);
+          setCurrentIndex(0);
+          localStorage.removeItem(`horarios_courses_${activeCareerId}_v7`);
+          localStorage.removeItem(`horarios_offer_${activeCareerId}_v7`);
+          localStorage.removeItem(`horarios_custom_${activeCareerId}_v7`);
+          localStorage.removeItem(`horarios_courses_${activeCareerId}_v6`);
+          localStorage.removeItem(`horarios_offer_${activeCareerId}_v6`);
+          localStorage.removeItem(`horarios_custom_${activeCareerId}_v6`);
+          setActiveTab('courses');
+        }
+      };
+
+      const exportScheduleImage = () => {
+        const element = document.getElementById('schedule-calendar-capture');
+        if (!element || typeof html2canvas === 'undefined') {
+          window.print();
+          return;
+        }
+        setIsExportingImage(true);
+        html2canvas(element, {
+          backgroundColor: '#0b0f19',
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          scrollX: 0,
+          scrollY: 0
+        }).then(canvas => {
+          const link = document.createElement('a');
+          const careerTag = currentCareer ? currentCareer.shortName : 'UCAB';
+          link.download = `Horario_${careerTag}_Opcion_${currentIndex + 1}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          setIsExportingImage(false);
+        }).catch(err => {
+          console.error(err);
+          setIsExportingImage(false);
+          window.print();
+        });
+      };
+
+      // Backtracking
+      const calculationResult = useMemo(() => {
+        if (selectedCourses.length === 0) {
+          return { combinations: [], missingCourses: [] };
+        }
+
+        const missing = [];
+        const activeCourseOptions = [];
+
+        selectedCourses.forEach((c, idx) => {
+          const offer = courseOffer[c.id] || { mode: c.mode || 'standard' };
+          const mode = offer.mode || c.mode || 'standard';
+          const color = PALETTES[idx % PALETTES.length];
+          const courseBase = { courseId: c.id, courseName: c.name, color, mode };
+
+          if (mode === 'virtual') {
+            const sections = (offer.virtualSections || []).filter(s => s.nrc && s.nrc.trim() !== '');
+            if (sections.length === 0) {
+              missing.push({ ...c, reason: 'Falta ingresar NRC virtual' });
+            } else {
+              const options = sections.map(sec => ({
+                ...courseBase,
+                type: 'virtual',
+                nrc: sec.nrc,
+                sectionName: sec.sectionName,
+                prof: sec.prof,
+                isVirtual: true,
+                schedule: []
+              }));
+              activeCourseOptions.push({ course: c, options });
+            }
+          } else if (mode === 'theory_practice') {
+            const groups = offer.theoryGroups || [];
+            const validOptions = [];
+
+            groups.forEach(tg => {
+              if (!tg.theoryNrc || tg.theoryNrc.trim() === '') return;
+              (tg.practices || []).forEach(pr => {
+                if (!pr.practiceNrc || pr.practiceNrc.trim() === '') return;
+
+                let selfConflict = false;
+                for (const tSlot of tg.theorySchedule) {
+                  for (const pSlot of pr.practiceSchedule) {
+                    if (slotsOverlap(tSlot, pSlot)) {
+                      selfConflict = true;
+                      break;
+                    }
+                  }
+                  if (selfConflict) break;
+                }
+
+                if (!selfConflict) {
+                  validOptions.push({
+                    ...courseBase,
+                    type: 'theory_practice',
+                    theoryNrc: tg.theoryNrc,
+                    theorySectionName: tg.theorySectionName,
+                    theoryProf: tg.theoryProf,
+                    theorySchedule: tg.theorySchedule,
+                    practiceNrc: pr.practiceNrc,
+                    practiceSectionName: pr.practiceSectionName,
+                    practiceProf: pr.practiceProf,
+                    practiceSchedule: pr.practiceSchedule,
+                    schedule: [...tg.theorySchedule, ...pr.practiceSchedule]
+                  });
+                }
+              });
+            });
+
+            if (validOptions.length === 0) {
+              missing.push({ ...c, reason: 'Falta ingresar NRC de Teoría o Práctica' });
+            } else {
+              activeCourseOptions.push({ course: c, options: validOptions });
+            }
+          } else {
+            const sections = (offer.sections || []).filter(s => s.nrc && s.nrc.trim() !== '' && s.schedule && s.schedule.length > 0);
+            if (sections.length === 0) {
+              missing.push({ ...c, reason: 'Falta ingresar NRC y horario' });
+            } else {
+              const options = sections.map(sec => ({
+                ...courseBase,
+                type: 'standard',
+                nrc: sec.nrc,
+                sectionName: sec.sectionName,
+                prof: sec.prof,
+                schedule: sec.schedule
+              }));
+              activeCourseOptions.push({ course: c, options });
+            }
+          }
+        });
+
+        if (missing.length > 0) {
+          return { combinations: [], missingCourses: missing };
+        }
+
+        const rawCombinations = [];
+
+        function backtrack(idx, currentPlaced) {
+          if (idx === activeCourseOptions.length) {
+            rawCombinations.push([...currentPlaced]);
+            return;
+          }
+
+          const { options } = activeCourseOptions[idx];
+          for (const opt of options) {
+            if (opt.isVirtual || !checkConflict(opt.schedule, currentPlaced)) {
+              currentPlaced.push(opt);
+              backtrack(idx + 1, currentPlaced);
+              currentPlaced.pop();
+            }
+          }
+        }
+
+        backtrack(0, []);
+
+        // Asignación secuencial de materias virtuales en Domingo con horas redondas
+        const SUNDAY_ROUND_SLOTS = [
+          { start: '07:00', end: '09:00' },
+          { start: '09:00', end: '11:00' },
+          { start: '11:00', end: '13:00' },
+          { start: '13:00', end: '15:00' },
+          { start: '15:00', end: '17:00' },
+          { start: '17:00', end: '19:00' }
+        ];
+
+        const processedCombinations = rawCombinations.map(comb => {
+          let virtualIdx = 0;
+          return comb.map(item => {
+            if (item.isVirtual) {
+              const slotTime = SUNDAY_ROUND_SLOTS[virtualIdx % SUNDAY_ROUND_SLOTS.length];
+              virtualIdx++;
+              return {
+                ...item,
+                schedule: [
+                  { day: 'DOM', start: slotTime.start, end: slotTime.end, isVirtual: true }
+                ]
+              };
+            }
+            return item;
+          });
+        });
+
+        return { combinations: processedCombinations, missingCourses: [] };
+      }, [selectedCourses, courseOffer]);
+
+      const combinations = calculationResult.combinations;
+      const missingCourses = calculationResult.missingCourses;
+
+      useEffect(() => {
+        if (currentIndex >= combinations.length) {
+          setCurrentIndex(0);
+        }
+      }, [combinations.length, currentIndex]);
+
+      const currentCombination = combinations[currentIndex] || [];
+
+      const copyNrcList = () => {
+        if (!currentCombination.length) return;
+
+        const detailLines = [];
+        const pureNrcs = [];
+
+        currentCombination.forEach(item => {
+          if (item.type === 'theory_practice') {
+            detailLines.push(`• ${item.courseName} [${item.courseId}]: Teoría NRC ${item.theoryNrc} (${item.theorySectionName}), Práctica NRC ${item.practiceNrc} (${item.practiceSectionName})`);
+            pureNrcs.push(item.theoryNrc, item.practiceNrc);
+          } else if (item.type === 'virtual') {
+            detailLines.push(`• ${item.courseName} [${item.courseId}]: NRC ${item.nrc} (${item.sectionName} - Virtual Asíncrona)`);
+            pureNrcs.push(item.nrc);
+          } else {
+            detailLines.push(`• ${item.courseName} [${item.courseId}]: NRC ${item.nrc} (${item.sectionName})`);
+            pureNrcs.push(item.nrc);
+          }
+        });
+
+        const fullText = `HORARIO SELECCIONADO - ${currentCareer.name.toUpperCase()} (NRCs para inscripción):\nNRCs: ${pureNrcs.join(', ')}\n\nDetalle:\n${detailLines.join('\n')}`;
+
+        navigator.clipboard.writeText(fullText).then(() => {
+          setCopiedNotification(true);
+          setTimeout(() => setCopiedNotification(false), 2500);
+        });
+      };
+
+      const { startHour, endHour, hasSaturday, hasSunday } = useMemo(() => {
+        let minH = 7;
+        let maxH = 19;
+        let sat = false;
+        let sun = false;
+
+        currentCombination.forEach(item => {
+          item.schedule.forEach(slot => {
+            if (slot.day === 'SAB') sat = true;
+            if (slot.day === 'DOM') sun = true;
+            const sDec = timeToDec(slot.start);
+            const eDec = timeToDec(slot.end);
+            if (sDec < minH) minH = Math.floor(sDec);
+            if (eDec > maxH) maxH = Math.ceil(eDec);
+          });
+        });
+
+        return { startHour: minH, endHour: maxH, hasSaturday: sat, hasSunday: sun };
+      }, [currentCombination]);
+
+      const activeDays = useMemo(() => {
+        return DAYS.filter(d => {
+          if (d.key === 'SAB' && !hasSaturday) return false;
+          if (d.key === 'DOM' && !hasSunday) return false;
+          return true;
+        });
+      }, [hasSaturday, hasSunday]);
+
+      const totalHours = Math.max(1, endHour - startHour);
+
+      const combinationStats = useMemo(() => {
+        if (!currentCombination.length) return null;
+        const daysWithClasses = new Set();
+        let earliest = 24;
+        let latest = 0;
+        let virtualCount = 0;
+
+        currentCombination.forEach(c => {
+          if (c.isVirtual) {
+            virtualCount++;
+            return;
+          }
+          c.schedule.forEach(s => {
+            daysWithClasses.add(s.day);
+            const sDec = timeToDec(s.start);
+            const eDec = timeToDec(s.end);
+            if (sDec < earliest) earliest = sDec;
+            if (eDec > latest) latest = eDec;
+          });
+        });
+
+        const totalPresentialDays = hasSaturday ? 6 : 5;
+        const freeDaysCount = Math.max(0, totalPresentialDays - daysWithClasses.size);
+
+        return {
+          daysCount: daysWithClasses.size,
+          freeDaysCount,
+          virtualCount,
+          earliest: earliest < 24 ? decToTime(earliest) : '--:--',
+          latest: latest > 0 ? decToTime(latest) : '--:--',
+          coursesCount: currentCombination.length
+        };
+      }, [currentCombination, hasSaturday]);
+
+      // =========================================================================
+      // PANTALLA INICIAL DE SELECCIÓN DE CARRERA (ANTES DE DESPLEGAR NADA)
+      // =========================================================================
+      if (!activeCareerId) {
+        return (
+          <div className="min-h-screen w-full bg-[#0b0f19] flex flex-col items-center justify-center p-6 text-slate-100 font-sans relative overflow-hidden">
+            {/* Luces de fondo decorativas */}
+            <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="max-w-xl w-full text-center space-y-8 z-10">
+              {/* Encabezado */}
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-semibold text-indigo-400 shadow-sm">
+                  <span>⚡</span> UCAB • Universidad Católica Andrés Bello
+                </div>
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                  Generador de Horarios
+                </h1>
+                <p className="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Bienvenido. Para comenzar a planificar y calcular tus combinaciones de materias sin choques, selecciona tu carrera:
+                </p>
+              </div>
+
+              {/* Tarjetas de Selección de Carrera */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                {/* Opción 1: Ingeniería Informática */}
+                <div
+                  onClick={() => selectCareer('informatica')}
+                  className="group p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-indigo-500/80 hover:bg-slate-900/90 transition-all duration-200 cursor-pointer text-left space-y-4 shadow-xl hover:shadow-indigo-600/10 hover:-translate-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-4xl p-3 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 group-hover:scale-110 transition">
+                      💻
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      8 Semestres
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-indigo-300 transition">
+                      Ingeniería Informática
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Facultad de Ingeniería • Pensum Oficial
+                    </p>
+                  </div>
+
+                  <button className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 group-hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20">
+                    <span>Planificar Informática</span>
+                    <span>→</span>
+                  </button>
+                </div>
+
+                {/* Opción 2: Psicología */}
+                <div
+                  onClick={() => selectCareer('psicologia')}
+                  className="group p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-purple-500/80 hover:bg-slate-900/90 transition-all duration-200 cursor-pointer text-left space-y-4 shadow-xl hover:shadow-purple-600/10 hover:-translate-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-4xl p-3 rounded-2xl bg-purple-600/10 border border-purple-500/20 group-hover:scale-110 transition">
+                      🧠
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      8 Semestres
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-purple-300 transition">
+                      Psicología
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Facultad de Humanidades • Pensum Oficial
+                    </p>
+                  </div>
+
+                  <button className="w-full py-2.5 px-4 rounded-xl bg-purple-600 group-hover:bg-purple-500 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20">
+                    <span>Planificar Psicología</span>
+                    <span>→</span>
+                  </button>
+                </div>
+
+              </div>
+
+              {/* Pie de pantalla inicial */}
+              <p className="text-[11px] text-slate-500">
+                Podrás alternar entre carreras en cualquier momento sin perder los datos cargados de ninguna.
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      // =========================================================================
+      // PANTALLA PRINCIPAL DE LA APLICACIÓN (UNA VEZ SELECCIONADA LA CARRERA)
+      // =========================================================================
+      return (
+        <div className="flex h-screen w-full overflow-hidden bg-[#0b0f19] font-sans text-slate-100">
+          
+          {/* BARRA LATERAL PRINCIPAL */}
+          <aside className="no-print w-[500px] flex-shrink-0 border-r border-slate-800/80 flex flex-col bg-[#0f172a]/95 backdrop-blur-xl z-20">
+            
+            {/* Header con botón para Cambiar de Carrera */}
+            <div className="p-4 border-b border-slate-800/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl p-1.5 rounded-xl bg-slate-900 border border-slate-800">
+                    {currentCareer.icon}
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-bold text-white tracking-tight">
+                        {currentCareer.name}
+                      </h2>
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      {currentCareer.faculty}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={resetAllData}
+                    title="Limpiar todas las materias y NRCs de esta carrera"
+                    className="text-[11px] px-2.5 py-1 rounded-md bg-rose-950/50 border border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-600 transition font-medium flex items-center gap-1"
+                  >
+                    <span>Limpiar</span>
+                    <span>🗑️</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveCareerId(null)}
+                    title="Volver a la pantalla de selección de carrera"
+                    className="text-[11px] px-2 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition"
+                  >
+                    Cambiar Carrera 🔄
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* PESTAÑAS DEL FLUJO */}
+            <div className="px-4 pt-3 pb-2 border-b border-slate-800/60 bg-slate-900/40">
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950/70 border border-slate-800 rounded-xl">
+                <button
+                  onClick={() => setActiveTab('courses')}
+                  className={`flex flex-col items-center py-2 px-1 rounded-lg text-xs font-semibold transition ${
+                    activeTab === 'courses'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <span className="text-[10px] uppercase opacity-75">Paso 1</span>
+                  <span className="truncate w-full text-center">Materias ({selectedCourses.length})</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('nrcs')}
+                  className={`flex flex-col items-center py-2 px-1 rounded-lg text-xs font-semibold transition ${
+                    activeTab === 'nrcs'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <span className="text-[10px] uppercase opacity-75">Paso 2</span>
+                  <span className="truncate w-full text-center">NRCs & Horarios</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('combinations')}
+                  className={`flex flex-col items-center py-2 px-1 rounded-lg text-xs font-semibold transition ${
+                    activeTab === 'combinations'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <span className="text-[10px] uppercase opacity-75">Paso 3</span>
+                  <span className="truncate w-full text-center">
+                    Combinaciones {combinations.length > 0 && `(${combinations.length})`}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* CONTENIDO SEGÚN LA PESTAÑA ACTIVA */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              
+              {/* TAB 1: SELECCIÓN DE MATERIAS */}
+              {activeTab === 'courses' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder={`Buscar materia en ${currentCareer.shortName}...`}
+                        value={searchFilter}
+                        onChange={(e) => setSearchFilter(e.target.value)}
+                        className="flex-1 px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      />
+                      <button
+                        onClick={() => setShowNewCourseModal(true)}
+                        className="px-3 py-2 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 text-xs font-semibold flex items-center gap-1 transition"
+                      >
+                        <span>+</span> Personalizada
+                      </button>
+                    </div>
+
+                    {/* Filtros de Semestre */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
+                      <button
+                        onClick={() => setSelectedSemester('all')}
+                        className={`px-2.5 py-1 rounded-md transition whitespace-nowrap ${
+                          selectedSemester === 'all'
+                            ? 'bg-slate-700 text-white font-semibold'
+                            : 'bg-slate-850 text-slate-400 hover:bg-slate-800'
+                        }`}
+                      >
+                        Todos
+                      </button>
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
+                        <button
+                          key={s}
+                          onClick={() => setSelectedSemester(s)}
+                          className={`px-2 py-1 rounded-md transition whitespace-nowrap ${
+                            selectedSemester === s
+                              ? 'bg-indigo-600 text-white font-semibold'
+                              : 'bg-slate-850 text-slate-400 hover:bg-slate-800'
+                          }`}
+                        >
+                          Sem {s}
+                        </button>
+                      ))}
+                      {customCourses.length > 0 && (
+                        <button
+                          onClick={() => setSelectedSemester('Personalizada')}
+                          className={`px-2 py-1 rounded-md transition whitespace-nowrap ${
+                            selectedSemester === 'Personalizada'
+                              ? 'bg-indigo-600 text-white font-semibold'
+                              : 'bg-slate-850 text-slate-400 hover:bg-slate-800'
+                          }`}
+                        >
+                          Personalizadas ({customCourses.length})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Modal de Materia Personalizada */}
+                  {showNewCourseModal && (
+                    <div className="p-3.5 rounded-xl border border-indigo-500/30 bg-indigo-950/20 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-xs font-bold text-indigo-300">Nueva Materia Personalizada</h4>
+                        <button
+                          onClick={() => setShowNewCourseModal(false)}
+                          className="text-slate-400 hover:text-white text-xs"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <form onSubmit={handleCreateCustomCourse} className="space-y-2.5">
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">Código de la Materia</label>
+                          <input
+                            type="text"
+                            placeholder="Ej. ELECT-01"
+                            value={newCourseCode}
+                            onChange={(e) => setNewCourseCode(e.target.value)}
+                            className="w-full px-2.5 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white uppercase font-mono focus:outline-none focus:border-indigo-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">Nombre de la Materia</label>
+                          <input
+                            type="text"
+                            placeholder="Ej. Asignatura Especial"
+                            value={newCourseName}
+                            onChange={(e) => setNewCourseName(e.target.value)}
+                            className="w-full px-2.5 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">Modalidad de la Materia</label>
+                          <select
+                            value={newCourseMode}
+                            onChange={(e) => setNewCourseMode(e.target.value)}
+                            className="w-full px-2.5 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 font-semibold"
+                          >
+                            <option value="standard">🏛️ Presencial Estándar (1 solo NRC por sección)</option>
+                            <option value="theory_practice">⚡ Teoría + Práctica (NRC de Teoría vinculado a Práctica)</option>
+                            <option value="virtual">🌐 Virtual / Asíncrona (Sin horario presencial, en Domingo)</option>
+                          </select>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowNewCourseModal(false)}
+                            className="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow"
+                          >
+                            Guardar y Seleccionar
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Listado de Materias Filtradas */}
+                  <div className="space-y-4">
+                    {['Personalizada', 1, 2, 3, 4, 5, 6, 7, 8].map(sem => {
+                      if (selectedSemester !== 'all' && selectedSemester !== sem) return null;
+
+                      const coursesInSem = allAvailableCourses.filter(c => c.semester === sem);
+                      const filtered = coursesInSem.filter(c =>
+                        c.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
+                        c.id.toLowerCase().includes(searchFilter.toLowerCase())
+                      );
+
+                      if (filtered.length === 0) return null;
+
+                      return (
+                        <div key={sem} className="space-y-1.5">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+                              {sem === 'Personalizada' ? 'Materias Personalizadas' : `Semestre ${sem} • ${currentCareer.shortName}`}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              {filtered.length} {filtered.length === 1 ? 'materia' : 'materias'}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            {filtered.map(course => {
+                              const isSelected = selectedCourses.some(c => c.id === course.id);
+                              const selectedObj = selectedCourses.find(c => c.id === course.id);
+                              const currentMode = selectedObj ? selectedObj.mode : (course.defaultMode || 'standard');
+
+                              return (
+                                <div
+                                  key={course.id}
+                                  onClick={() => toggleCourse(course)}
+                                  className={`p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-center justify-between group ${
+                                    isSelected
+                                      ? 'border-indigo-500/70 bg-indigo-950/30 text-white shadow-sm'
+                                      : 'border-slate-800/80 bg-slate-900/40 text-slate-300 hover:border-slate-700 hover:bg-slate-900/80'
+                                  }`}
+                                >
+                                  <div className="pr-3 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-semibold leading-tight text-slate-100">{course.name}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                                        {course.id}
+                                      </span>
+
+                                      {currentMode === 'theory_practice' && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                          ⚡ Teoría + Práctica
+                                        </span>
+                                      )}
+                                      {currentMode === 'virtual' && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                          🌐 Virtual (V)
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center">
+                                    <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition ${
+                                      isSelected
+                                        ? 'bg-indigo-600 border-indigo-500 text-white'
+                                        : 'border-slate-700 bg-slate-950 group-hover:border-slate-600'
+                                    }`}>
+                                      {isSelected && <span className="text-xs">✓</span>}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {selectedCourses.length > 0 && (
+                    <div className="pt-2 sticky bottom-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a] to-transparent pb-1">
+                      <button
+                        onClick={() => setActiveTab('nrcs')}
+                        className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30"
+                      >
+                        <span>Continuar a Cargar NRCs ({selectedCourses.length})</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: CARGA DE NRCs Y HORARIOS */}
+              {activeTab === 'nrcs' && (
+                <div className="space-y-4">
+                  {selectedCourses.length === 0 ? (
+                    <div className="text-center py-12 px-4 border border-dashed border-slate-800 rounded-2xl bg-slate-900/20">
+                      <span className="text-3xl block mb-2">{currentCareer.icon}</span>
+                      <p className="text-xs font-semibold text-slate-300">No has seleccionado materias en {currentCareer.name}</p>
+                      <button
+                        onClick={() => setActiveTab('courses')}
+                        className="mt-4 px-3.5 py-1.5 rounded-lg bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/50 text-xs font-semibold transition"
+                      >
+                        Ir a Seleccionar Materias
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between px-1">
+                        <p className="text-[11px] text-slate-400">
+                          Horarios en formato de <b>horas redondas (24h)</b>.
+                        </p>
+                        <button
+                          onClick={() => setActiveTab('combinations')}
+                          className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 underline"
+                        >
+                          Ver combinaciones →
+                        </button>
+                      </div>
+
+                      {selectedCourses.map((course, cIdx) => {
+                        const offer = courseOffer[course.id] || createDefaultOfferForMode(course.mode || 'standard');
+                        const mode = offer.mode || course.mode || 'standard';
+                        const palette = PALETTES[cIdx % PALETTES.length];
+
+                        return (
+                          <div
+                            key={course.id}
+                            className="border border-slate-800 bg-slate-950/60 rounded-2xl p-3.5 space-y-3 shadow-sm hover:border-slate-700/80 transition"
+                          >
+                            <div className="flex items-start justify-between border-b border-slate-800/80 pb-2.5">
+                              <div>
+                                <h3 className="text-xs font-bold text-white leading-snug">
+                                  {course.name}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
+                                    {course.id}
+                                  </span>
+                                  
+                                  <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-slate-800 text-[10px]">
+                                    <button
+                                      type="button"
+                                      onClick={() => changeCourseMode(course.id, 'standard')}
+                                      className={`px-1.5 py-0.5 rounded ${mode === 'standard' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                      Estándar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => changeCourseMode(course.id, 'theory_practice')}
+                                      className={`px-1.5 py-0.5 rounded ${mode === 'theory_practice' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                      Teoría + Práctica
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => changeCourseMode(course.id, 'virtual')}
+                                      className={`px-1.5 py-0.5 rounded ${mode === 'virtual' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                      Virtual (V)
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* MODO VIRTUAL */}
+                            {mode === 'virtual' && (
+                              <div className="space-y-2.5 bg-emerald-950/20 border border-emerald-500/20 p-3 rounded-xl">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <span className="text-[11px] font-bold text-emerald-300 flex items-center gap-1">
+                                      🌐 Materia Virtual / Asíncrona
+                                    </span>
+                                    <p className="text-[10px] text-slate-400">
+                                      Sin horario presencial. Se ubica el <b>Domingo</b> sin causar choques.
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => addVirtualSection(course.id)}
+                                    className="text-[10px] px-2 py-1 rounded bg-emerald-600/30 text-emerald-200 hover:bg-emerald-600/50 font-semibold"
+                                  >
+                                    + NRC Virtual
+                                  </button>
+                                </div>
+
+                                <div className="space-y-2 pt-1">
+                                  {(offer.virtualSections || []).map((vSec, vIdx) => (
+                                    <div key={vIdx} className="flex items-center gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 text-xs">
+                                      <div className="w-28">
+                                        <label className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">NRC</label>
+                                        <input
+                                          type="text"
+                                          placeholder="Ej. 18201"
+                                          value={vSec.nrc}
+                                          onChange={(e) => updateVirtualSection(course.id, vIdx, 'nrc', e.target.value)}
+                                          className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs font-mono font-bold text-emerald-300 focus:outline-none focus:border-emerald-500"
+                                        />
+                                      </div>
+                                      <div className="w-24">
+                                        <label className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Sección</label>
+                                        <input
+                                          type="text"
+                                          placeholder="Sec V1"
+                                          value={vSec.sectionName}
+                                          onChange={(e) => updateVirtualSection(course.id, vIdx, 'sectionName', e.target.value)}
+                                          className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                                        />
+                                      </div>
+                                      <div className="flex-1">
+                                        <label className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Profesor (opcional)</label>
+                                        <input
+                                          type="text"
+                                          placeholder="Docente virtual"
+                                          value={vSec.prof}
+                                          onChange={(e) => updateVirtualSection(course.id, vIdx, 'prof', e.target.value)}
+                                          className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-slate-300 focus:outline-none focus:border-emerald-500"
+                                        />
+                                      </div>
+                                      {(offer.virtualSections || []).length > 1 && (
+                                        <button
+                                          onClick={() => removeVirtualSection(course.id, vIdx)}
+                                          className="text-slate-500 hover:text-rose-400 text-sm mt-3 px-1"
+                                        >
+                                          ✕
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* MODO TEORÍA + PRÁCTICA */}
+                            {mode === 'theory_practice' && (
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-bold text-purple-300 flex items-center gap-1">
+                                    ⚡ Secciones de Teoría vinculadas a Prácticas
+                                  </span>
+                                  <button
+                                    onClick={() => addTheoryGroup(course.id)}
+                                    className="text-[11px] px-2.5 py-1 rounded-lg bg-purple-600/30 text-purple-200 hover:bg-purple-600/50 font-semibold"
+                                  >
+                                    + Grupo de Teoría
+                                  </button>
+                                </div>
+
+                                {(offer.theoryGroups || []).map((tg, tgIdx) => (
+                                  <div key={tg.id || tgIdx} className="p-3 rounded-xl bg-slate-900/90 border border-purple-500/30 space-y-3">
+                                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                                      <span className="text-[10px] uppercase font-bold text-purple-400 tracking-wider">
+                                        Grupo de Teoría #{tgIdx + 1}
+                                      </span>
+                                      {(offer.theoryGroups || []).length > 1 && (
+                                        <button
+                                          onClick={() => removeTheoryGroup(course.id, tgIdx)}
+                                          className="text-rose-400 hover:text-rose-300 text-xs"
+                                        >
+                                          Eliminar Grupo
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-2">
+                                      <div className="grid grid-cols-12 gap-2 items-center">
+                                        <div className="col-span-4">
+                                          <label className="text-[9px] font-bold text-purple-300 uppercase block mb-0.5">NRC Teoría</label>
+                                          <input
+                                            type="text"
+                                            placeholder="Ej. 15660"
+                                            value={tg.theoryNrc}
+                                            onChange={(e) => updateTheoryField(course.id, tgIdx, 'theoryNrc', e.target.value)}
+                                            className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs font-mono font-bold text-purple-200 focus:outline-none focus:border-purple-500"
+                                          />
+                                        </div>
+                                        <div className="col-span-3">
+                                          <label className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">Sección</label>
+                                          <input
+                                            type="text"
+                                            value={tg.theorySectionName}
+                                            onChange={(e) => updateTheoryField(course.id, tgIdx, 'theorySectionName', e.target.value)}
+                                            className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-slate-200 focus:outline-none"
+                                          />
+                                        </div>
+                                        <div className="col-span-5">
+                                          <label className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">Prof. Teoría</label>
+                                          <input
+                                            type="text"
+                                            placeholder="Profesor"
+                                            value={tg.theoryProf}
+                                            onChange={(e) => updateTheoryField(course.id, tgIdx, 'theoryProf', e.target.value)}
+                                            className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-slate-300 focus:outline-none"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {/* Horario de Teoría con HORAS REDONDAS */}
+                                      <div className="pt-1 border-t border-slate-800/80 flex items-center gap-1.5 text-xs">
+                                        <span className="text-[10px] text-purple-300 font-semibold w-16">Horario:</span>
+                                        <select
+                                          value={tg.theorySchedule[0]?.day || 'LUN'}
+                                          onChange={(e) => {
+                                            const updated = [...tg.theorySchedule];
+                                            updated[0] = { ...updated[0], day: e.target.value };
+                                            updateTheoryField(course.id, tgIdx, 'theorySchedule', updated);
+                                          }}
+                                          className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-[11px]"
+                                        >
+                                          {DAYS.filter(d => d.key !== 'DOM').map(d => (
+                                            <option key={d.key} value={d.key}>{d.label}</option>
+                                          ))}
+                                        </select>
+
+                                        <select
+                                          value={tg.theorySchedule[0]?.start || '07:00'}
+                                          onChange={(e) => {
+                                            const updated = [...tg.theorySchedule];
+                                            updated[0] = { ...updated[0], start: e.target.value };
+                                            updateTheoryField(course.id, tgIdx, 'theorySchedule', updated);
+                                          }}
+                                          className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-[11px] font-mono"
+                                        >
+                                          {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                        <span className="text-slate-500 font-bold">-</span>
+                                        <select
+                                          value={tg.theorySchedule[0]?.end || '09:00'}
+                                          onChange={(e) => {
+                                            const updated = [...tg.theorySchedule];
+                                            updated[0] = { ...updated[0], end: e.target.value };
+                                            updateTheoryField(course.id, tgIdx, 'theorySchedule', updated);
+                                          }}
+                                          className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-[11px] font-mono"
+                                        >
+                                          {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                      </div>
+                                    </div>
+
+                                    {/* Prácticas asociadas */}
+                                    <div className="space-y-2 pl-3 border-l-2 border-purple-500/40">
+                                      <div className="flex items-center justify-between text-[10px]">
+                                        <span className="font-bold text-slate-300">
+                                          Prácticas asociadas a este NRC de Teoría ({tg.practices.length}):
+                                        </span>
+                                        <button
+                                          onClick={() => addPracticeToTheory(course.id, tgIdx)}
+                                          className="text-purple-300 hover:text-white font-semibold"
+                                        >
+                                          + Agregar Práctica
+                                        </button>
+                                      </div>
+
+                                      {tg.practices.map((pr, prIdx) => (
+                                        <div key={pr.id || prIdx} className="bg-slate-950/90 p-2 rounded-lg border border-slate-800 space-y-1.5 text-xs">
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-24">
+                                              <label className="text-[9px] text-slate-400 uppercase font-bold block">NRC Práctica</label>
+                                              <input
+                                                type="text"
+                                                placeholder="Ej. 15683"
+                                                value={pr.practiceNrc}
+                                                onChange={(e) => updatePracticeField(course.id, tgIdx, prIdx, 'practiceNrc', e.target.value)}
+                                                className="w-full px-1.5 py-1 bg-slate-900 border border-slate-700 rounded text-xs font-mono font-bold text-indigo-300 focus:outline-none"
+                                              />
+                                            </div>
+                                            <div className="w-20">
+                                              <label className="text-[9px] text-slate-400 uppercase font-bold block">Sección</label>
+                                              <input
+                                                type="text"
+                                                value={pr.practiceSectionName}
+                                                onChange={(e) => updatePracticeField(course.id, tgIdx, prIdx, 'practiceSectionName', e.target.value)}
+                                                className="w-full px-1.5 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-slate-200 focus:outline-none"
+                                              />
+                                            </div>
+                                            <div className="flex-1">
+                                              <label className="text-[9px] text-slate-400 uppercase font-bold block">Profesor</label>
+                                              <input
+                                                type="text"
+                                                placeholder="Opcional"
+                                                value={pr.practiceProf}
+                                                onChange={(e) => updatePracticeField(course.id, tgIdx, prIdx, 'practiceProf', e.target.value)}
+                                                className="w-full px-1.5 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-slate-300 focus:outline-none"
+                                              />
+                                            </div>
+                                            {tg.practices.length > 1 && (
+                                              <button
+                                                onClick={() => removePracticeFromTheory(course.id, tgIdx, prIdx)}
+                                                className="text-slate-500 hover:text-rose-400 text-sm mt-3 px-1"
+                                                title="Eliminar práctica"
+                                              >
+                                                ✕
+                                              </button>
+                                            )}
+                                          </div>
+
+                                          {/* Horario de Práctica con HORAS REDONDAS */}
+                                          <div className="flex items-center gap-1.5 text-xs pt-1 border-t border-slate-800/60">
+                                            <select
+                                              value={pr.practiceSchedule[0]?.day || 'MIE'}
+                                              onChange={(e) => {
+                                                const updated = [...pr.practiceSchedule];
+                                                updated[0] = { ...updated[0], day: e.target.value };
+                                                updatePracticeField(course.id, tgIdx, prIdx, 'practiceSchedule', updated);
+                                              }}
+                                              className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-slate-200 text-[11px]"
+                                            >
+                                              {DAYS.filter(d => d.key !== 'DOM').map(d => (
+                                                <option key={d.key} value={d.key}>{d.label}</option>
+                                              ))}
+                                            </select>
+
+                                            <select
+                                              value={pr.practiceSchedule[0]?.start || '07:00'}
+                                              onChange={(e) => {
+                                                const updated = [...pr.practiceSchedule];
+                                                updated[0] = { ...updated[0], start: e.target.value };
+                                                updatePracticeField(course.id, tgIdx, prIdx, 'practiceSchedule', updated);
+                                              }}
+                                              className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-slate-200 text-[11px] font-mono"
+                                            >
+                                              {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                            <span className="text-slate-500 font-bold">-</span>
+                                            <select
+                                              value={pr.practiceSchedule[0]?.end || '09:00'}
+                                              onChange={(e) => {
+                                                const updated = [...pr.practiceSchedule];
+                                                updated[0] = { ...updated[0], end: e.target.value };
+                                                updatePracticeField(course.id, tgIdx, prIdx, 'practiceSchedule', updated);
+                                              }}
+                                              className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-slate-200 text-[11px] font-mono"
+                                            >
+                                              {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* MODO ESTÁNDAR */}
+                            {mode === 'standard' && (
+                              <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[11px] font-bold text-slate-300">Secciones estándar</span>
+                                  <button
+                                    onClick={() => addStandardSection(course.id)}
+                                    className="text-[11px] px-2.5 py-1 rounded-lg bg-indigo-600/30 text-indigo-200 hover:bg-indigo-600/50 font-semibold"
+                                  >
+                                    + Agregar NRC
+                                  </button>
+                                </div>
+
+                                {(offer.sections || []).map((sec, sIdx) => (
+                                  <div key={sIdx} className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2 text-xs">
+                                    <div className="grid grid-cols-12 gap-2 items-center">
+                                      <div className="col-span-4">
+                                        <label className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">NRC</label>
+                                        <input
+                                          type="text"
+                                          placeholder="Ej. 14201"
+                                          value={sec.nrc}
+                                          onChange={(e) => updateStandardSectionField(course.id, sIdx, 'nrc', e.target.value)}
+                                          className="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded text-xs font-mono font-bold text-indigo-300 focus:outline-none"
+                                        />
+                                      </div>
+                                      <div className="col-span-3">
+                                        <label className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">Sección</label>
+                                        <input
+                                          type="text"
+                                          value={sec.sectionName}
+                                          onChange={(e) => updateStandardSectionField(course.id, sIdx, 'sectionName', e.target.value)}
+                                          className="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded text-xs text-slate-200 focus:outline-none"
+                                        />
+                                      </div>
+                                      <div className="col-span-4">
+                                        <label className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">Profesor</label>
+                                        <input
+                                          type="text"
+                                          placeholder="Opcional"
+                                          value={sec.prof}
+                                          onChange={(e) => updateStandardSectionField(course.id, sIdx, 'prof', e.target.value)}
+                                          className="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded text-xs text-slate-300 focus:outline-none truncate"
+                                        />
+                                      </div>
+                                      <div className="col-span-1 flex justify-end">
+                                        {(offer.sections || []).length > 1 && (
+                                          <button
+                                            onClick={() => removeStandardSection(course.id, sIdx)}
+                                            className="text-slate-500 hover:text-rose-400 text-sm mt-3 px-1"
+                                            title="Eliminar NRC"
+                                          >
+                                            ✕
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Bloques con HORAS REDONDAS */}
+                                    <div className="space-y-1.5 pt-1 border-t border-slate-800/60">
+                                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                                        <span>Días y Horarios:</span>
+                                        <button
+                                          onClick={() => addStandardSlot(course.id, sIdx)}
+                                          className="text-indigo-400 hover:text-indigo-300 font-semibold"
+                                        >
+                                          + Agregar otro día/hora
+                                        </button>
+                                      </div>
+
+                                      {sec.schedule.map((slot, bIdx) => (
+                                        <div key={bIdx} className="bg-slate-950 p-2 rounded-lg border border-slate-800 flex items-center gap-1.5 text-xs">
+                                          <select
+                                            value={slot.day}
+                                            onChange={(e) => updateStandardSlot(course.id, sIdx, bIdx, 'day', e.target.value)}
+                                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-[11px]"
+                                          >
+                                            {DAYS.filter(d => d.key !== 'DOM').map(d => (
+                                              <option key={d.key} value={d.key}>{d.label}</option>
+                                            ))}
+                                          </select>
+
+                                          <select
+                                            value={slot.start}
+                                            onChange={(e) => updateStandardSlot(course.id, sIdx, bIdx, 'start', e.target.value)}
+                                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-[11px] font-mono"
+                                          >
+                                            {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
+                                          </select>
+                                          <span className="text-slate-500 font-bold">-</span>
+                                          <select
+                                            value={slot.end}
+                                            onChange={(e) => updateStandardSlot(course.id, sIdx, bIdx, 'end', e.target.value)}
+                                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-[11px] font-mono"
+                                          >
+                                            {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
+                                          </select>
+
+                                          {sec.schedule.length > 1 && (
+                                            <button
+                                              onClick={() => removeStandardSlot(course.id, sIdx, bIdx)}
+                                              className="text-slate-500 hover:text-rose-400 p-1 ml-auto"
+                                            >
+                                              ✕
+                                            </button>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      <div className="pt-2 sticky bottom-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a] to-transparent pb-1">
+                        <button
+                          onClick={() => setActiveTab('combinations')}
+                          className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30"
+                        >
+                          <span>⚡ Generar Combinaciones de Horarios</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 3: COMBINACIONES */}
+              {activeTab === 'combinations' && (
+                <div className="space-y-4">
+                  {missingCourses.length > 0 ? (
+                    <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/30 space-y-2">
+                      <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
+                        <span>⚠️</span> Materias con datos incompletos
+                      </div>
+                      <p className="text-[11px] text-slate-300">
+                        Para calcular las combinaciones en <b>{currentCareer.name}</b>, configura los NRCs de:
+                      </p>
+                      <ul className="text-xs font-mono space-y-1 pl-2 text-amber-200">
+                        {missingCourses.map(m => (
+                          <li key={m.id}>• {m.name} ({m.id}) - {m.reason}</li>
+                        ))}
+                      </ul>
+                      <button
+                        onClick={() => setActiveTab('nrcs')}
+                        className="mt-2 w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition"
+                      >
+                        Ir a Completar NRCs
+                      </button>
+                    </div>
+                  ) : combinations.length === 0 ? (
+                    <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/30 space-y-2 text-center py-8">
+                      <span className="text-3xl block mb-1">🚫</span>
+                      <h4 className="text-xs font-bold text-rose-300">No hay combinaciones posibles sin choque</h4>
+                      <p className="text-[11px] text-slate-300 leading-relaxed max-w-xs mx-auto">
+                        Las secciones o prácticas ingresadas tienen solapamiento de horario entre sí.
+                      </p>
+                      <button
+                        onClick={() => setActiveTab('nrcs')}
+                        className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition"
+                      >
+                        Modificar NRCs o Horarios
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      
+                      {/* Resumen de Combinación */}
+                      <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+                              Combinación #{currentIndex + 1} de {combinations.length} • {currentCareer.shortName}
+                            </span>
+                            <h3 className="text-xs font-bold text-white">
+                              {currentCombination.length} Materias sin choques
+                            </h3>
+                          </div>
+
+                          <button
+                            onClick={copyNrcList}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                              copiedNotification
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40'
+                            }`}
+                          >
+                            <span>{copiedNotification ? '✓ ¡Copiado!' : '📋 Copiar NRCs'}</span>
+                          </button>
+                        </div>
+
+                        {combinationStats && (
+                          <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+                              <span className="text-[10px] text-slate-500 block">Días de Clase</span>
+                              <span className="text-xs font-bold text-white">{combinationStats.daysCount} días</span>
+                            </div>
+                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+                              <span className="text-[10px] text-slate-500 block">Días Libres</span>
+                              <span className="text-xs font-bold text-emerald-400">{combinationStats.freeDaysCount} días</span>
+                            </div>
+                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+                              <span className="text-[10px] text-slate-500 block">Virtuales (Dom)</span>
+                              <span className="text-xs font-bold text-indigo-300 font-mono">
+                                {combinationStats.virtualCount} {combinationStats.virtualCount === 1 ? 'materia' : 'materias'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            NRCs que debes inscribir en esta opción:
+                          </p>
+
+                          <div className="space-y-1.5">
+                            {currentCombination.map((item, idx) => (
+                              <div
+                                key={item.courseId}
+                                className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between text-xs"
+                              >
+                                <div className="pr-2 flex-1">
+                                  <p className="font-semibold text-white leading-tight">{item.courseName}</p>
+                                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                    {item.courseId}
+                                  </p>
+                                </div>
+
+                                <div className="text-right">
+                                  {item.type === 'theory_practice' ? (
+                                    <div className="space-y-1">
+                                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-950 text-purple-200 border border-purple-500/40 block">
+                                        Teoría: {item.theoryNrc}
+                                      </span>
+                                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-950 text-indigo-200 border border-indigo-500/40 block">
+                                        Práctica: {item.practiceNrc}
+                                      </span>
+                                    </div>
+                                  ) : item.type === 'virtual' ? (
+                                    <span className="font-mono text-xs font-bold px-2 py-1 rounded-md bg-emerald-950 text-emerald-200 border border-emerald-500/40 inline-block">
+                                      NRC {item.nrc} (Virtual)
+                                    </span>
+                                  ) : (
+                                    <span className="font-mono text-xs font-bold px-2 py-1 rounded-md bg-indigo-950 text-indigo-200 border border-indigo-500/40 inline-block">
+                                      NRC {item.nrc}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {combinations.length > 1 && (
+                        <div className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Saltar a combinación:
+                          </span>
+                          <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+                            {combinations.map((_, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => setCurrentIndex(idx)}
+                                className={`px-2 py-1 rounded-md text-[11px] font-mono transition ${
+                                  currentIndex === idx
+                                    ? 'bg-indigo-600 text-white font-bold shadow'
+                                    : 'bg-slate-950 text-slate-400 hover:text-white hover:bg-slate-800'
+                                }`}
+                              >
+                                #{idx + 1}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Pie de Barra Lateral */}
+            <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 flex items-center justify-between text-[11px] text-slate-500">
+              <span>{selectedCourses.length} materias seleccionadas</span>
+              <span>{currentCareer.name} • 24h</span>
+            </div>
+          </aside>
+
+          {/* ÁREA PRINCIPAL: CALENDARIO */}
+          <main className="flex-1 flex flex-col overflow-hidden bg-[#0b0f19]">
+            
+            {/* Header del Calendario */}
+            <header className="h-16 border-b border-slate-800/80 px-6 flex items-center justify-between bg-slate-900/40 backdrop-blur no-print">
+              <div>
+                {combinations.length > 0 ? (
+                  <div className="flex items-center gap-3">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      ✓ {combinations.length} {combinations.length === 1 ? 'Opción Viable' : 'Opciones Viables'}
+                    </span>
+                    <span className="text-xs text-slate-300">
+                      Mostrando <span className="text-white font-bold text-sm">#{currentIndex + 1}</span> de{' '}
+                      <span className="text-white font-bold text-sm">{combinations.length}</span> en <span className="text-indigo-400 font-semibold">{currentCareer.shortName}</span>
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">
+                    {selectedCourses.length === 0
+                      ? `Selecciona tus materias de ${currentCareer.name} para comenzar.`
+                      : 'Configura los NRCs para visualizar los horarios viables.'}
+                  </p>
+                )}
+              </div>
+
+              {combinations.length > 0 && (
+                <div className="flex items-center gap-2 no-print">
+                  <button
+                    onClick={() => setCurrentIndex(0)}
+                    disabled={currentIndex === 0}
+                    className="px-2 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 disabled:opacity-30 transition"
+                    title="Primera combinación"
+                  >
+                    ⇤ Primera
+                  </button>
+
+                  <button
+                    onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                    disabled={currentIndex === 0}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 disabled:opacity-30 transition flex items-center gap-1"
+                  >
+                    <span>←</span> Anterior
+                  </button>
+
+                  <span className="font-mono text-xs px-2 text-slate-300">
+                    {currentIndex + 1} / {combinations.length}
+                  </span>
+
+                  <button
+                    onClick={() => setCurrentIndex(prev => Math.min(combinations.length - 1, prev + 1))}
+                    disabled={currentIndex >= combinations.length - 1}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-30 transition shadow-lg shadow-indigo-600/20 flex items-center gap-1"
+                  >
+                    Siguiente <span>→</span>
+                  </button>
+
+                  <button
+                    onClick={() => setCurrentIndex(combinations.length - 1)}
+                    disabled={currentIndex >= combinations.length - 1}
+                    className="px-2 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 disabled:opacity-30 transition"
+                    title="Última combinación"
+                  >
+                    Última ⇥
+                  </button>
+
+                  <button
+                    onClick={exportScheduleImage}
+                    disabled={isExportingImage}
+                    className="ml-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 transition flex items-center gap-1.5 shadow-md shadow-indigo-600/20"
+                    title="Descargar horario como imagen PNG (sin necesidad de impresora)"
+                  >
+                    <span>{isExportingImage ? '⏳ Guardando...' : '📸 Guardar Imagen'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => window.print()}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition flex items-center gap-1"
+                    title="Imprimir o guardar en PDF"
+                  >
+                    <span>🖨️ Imprimir / PDF</span>
+                  </button>
+                </div>
+              )}
+            </header>
+
+            {/* Cuadrícula Semanal */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {combinations.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-3xl mb-4">
+                    {currentCareer.icon}
+                  </div>
+                  <h2 className="text-base font-bold text-white mb-1">
+                    Planificador de Horarios • {currentCareer.name}
+                  </h2>
+                  <p className="text-xs text-slate-400 max-w-md leading-relaxed mb-4">
+                    {selectedCourses.length === 0
+                      ? `No tienes materias seleccionadas. Selecciona las asignaturas de ${currentCareer.name} que deseas inscribir este semestre.`
+                      : 'Carga los NRCs de cada sección o práctica en la pestaña "NRCs & Horarios".'}
+                  </p>
+                  {selectedCourses.length === 0 ? (
+                    <button
+                      onClick={() => setActiveTab('courses')}
+                      className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-indigo-600/30 flex items-center gap-2 mx-auto"
+                    >
+                      <span>Seleccionar Materias (Paso 1)</span>
+                      <span>→</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setActiveTab('nrcs')}
+                      className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-indigo-600/30 flex items-center gap-2 mx-auto"
+                    >
+                      <span>Cargar NRCs & Horarios (Paso 2)</span>
+                      <span>→</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div id="schedule-calendar-capture" className="border border-slate-800 rounded-2xl overflow-hidden bg-[#0b0f19] shadow-2xl p-1">
+                  <div className="grid" style={{ gridTemplateColumns: `80px repeat(${activeDays.length}, minmax(0, 1fr))` }}>
+                    <div className="border-b border-r border-slate-800 bg-slate-900/90 p-3 text-center text-xs font-bold text-slate-500 font-mono">
+                      24h
+                    </div>
+                    {activeDays.map(day => (
+                      <div
+                        key={day.key}
+                        className={`border-b border-r border-slate-800 p-3 text-center text-xs font-bold last:border-r-0 ${
+                          day.key === 'DOM'
+                            ? 'bg-emerald-950/40 text-emerald-300'
+                            : 'bg-slate-900/90 text-slate-200'
+                        }`}
+                      >
+                        <span className="hidden sm:inline">{day.label}</span>
+                        <span className="sm:hidden">{day.short}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid relative" style={{ gridTemplateColumns: `80px repeat(${activeDays.length}, minmax(0, 1fr))` }}>
+                    
+                    <div className="border-r border-slate-800 bg-slate-900/40 text-[11px] font-mono text-slate-400 select-none">
+                      {Array.from({ length: totalHours }).map((_, i) => (
+                        <div key={i} className="h-16 border-b border-slate-800/50 p-2 flex items-start">
+                          {String(startHour + i).padStart(2, '0')}:00
+                        </div>
+                      ))}
+                    </div>
+
+                    {activeDays.map(day => (
+                      <div
+                        key={day.key}
+                        className={`relative border-r border-slate-800/50 last:border-r-0 ${
+                          day.key === 'DOM' ? 'bg-emerald-950/10' : ''
+                        }`}
+                      >
+                        {Array.from({ length: totalHours }).map((_, i) => (
+                          <div key={i} className="h-16 border-b border-slate-800/30" />
+                        ))}
+
+                        {currentCombination.map(item => {
+                          if (item.type === 'theory_practice') {
+                            const theorySlots = (item.theorySchedule || []).filter(s => s.day === day.key);
+                            const practiceSlots = (item.practiceSchedule || []).filter(s => s.day === day.key);
+
+                            const renderSlot = (slot, subType, nrcVal, secName, profVal) => {
+                              const sDec = timeToDec(slot.start);
+                              const eDec = timeToDec(slot.end);
+                              const topPercent = ((sDec - startHour) / totalHours) * 100;
+                              const heightPercent = ((eDec - sDec) / totalHours) * 100;
+
+                              return (
+                                <div
+                                  key={`${item.courseId}-${subType}-${slot.day}-${slot.start}`}
+                                  style={{
+                                    top: `${Math.max(0, topPercent)}%`,
+                                    height: `${Math.max(4, heightPercent)}%`
+                                  }}
+                                  className={`absolute inset-x-1.5 rounded-xl p-2.5 text-white border shadow-lg flex flex-col justify-between overflow-hidden transition-all duration-200 hover:scale-[1.01] hover:z-10 ${item.color.bg} ${item.color.border}`}
+                                >
+                                  <div>
+                                    <div className="flex items-start justify-between gap-1">
+                                      <p className="font-bold text-xs leading-tight break-words drop-shadow-sm">
+                                        {item.courseName} <span className="opacity-80">[{subType}]</span>
+                                      </p>
+                                      <span className="font-mono text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-black/40 text-white/95 border border-white/20 whitespace-nowrap">
+                                        NRC {nrcVal}
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] font-mono text-white/80 mt-0.5">
+                                      {item.courseId} • {secName}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex items-center justify-between text-[10px] font-mono text-white/90 pt-1 border-t border-white/10 mt-1">
+                                    <span>{slot.start} - {slot.end}</span>
+                                    {profVal && (
+                                      <span className="truncate max-w-[110px] font-sans opacity-90" title={profVal}>
+                                        {profVal}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            };
+
+                            return (
+                              <React.Fragment key={item.courseId}>
+                                {theorySlots.map(s => renderSlot(s, 'Teoría', item.theoryNrc, item.theorySectionName, item.theoryProf))}
+                                {practiceSlots.map(s => renderSlot(s, 'Práctica', item.practiceNrc, item.practiceSectionName, item.practiceProf))}
+                              </React.Fragment>
+                            );
+                          }
+
+                          if (item.type === 'virtual') {
+                            if (day.key !== 'DOM') return null;
+                            const slot = item.schedule[0];
+                            if (!slot) return null;
+
+                            const sDec = timeToDec(slot.start);
+                            const eDec = timeToDec(slot.end);
+                            const topPercent = ((sDec - startHour) / totalHours) * 100;
+                            const heightPercent = ((eDec - sDec) / totalHours) * 100;
+
+                            return (
+                              <div
+                                key={item.courseId}
+                                style={{
+                                  top: `${Math.max(0, topPercent)}%`,
+                                  height: `${Math.max(4, heightPercent)}%`
+                                }}
+                                className="absolute inset-x-1.5 rounded-xl p-2.5 text-white border border-emerald-400 bg-emerald-800/90 shadow-lg flex flex-col justify-between overflow-hidden transition-all duration-200 hover:scale-[1.01] hover:z-10"
+                              >
+                                <div>
+                                  <div className="flex items-start justify-between gap-1">
+                                    <p className="font-bold text-xs leading-tight break-words">
+                                      {item.courseName}
+                                    </p>
+                                    <span className="font-mono text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-black/40 text-emerald-200 border border-emerald-300/30 whitespace-nowrap">
+                                      NRC {item.nrc}
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] font-mono text-emerald-200 mt-0.5 flex items-center gap-1">
+                                    <span>🌐 Asíncrona / Virtual</span> • {item.sectionName}
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center justify-between text-[10px] font-mono text-emerald-100 pt-1 border-t border-emerald-500/30 mt-1">
+                                  <span>{slot.start} - {slot.end}</span>
+                                  <span className="font-sans text-[9px] bg-emerald-950/60 px-1 py-0.5 rounded">
+                                    Horario libre
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (item.schedule || [])
+                            .filter(s => s.day === day.key)
+                            .map((slot, sIdx) => {
+                              const sDec = timeToDec(slot.start);
+                              const eDec = timeToDec(slot.end);
+                              const topPercent = ((sDec - startHour) / totalHours) * 100;
+                              const heightPercent = ((eDec - sDec) / totalHours) * 100;
+
+                              return (
+                                <div
+                                  key={`${item.courseId}-${sIdx}`}
+                                  style={{
+                                    top: `${Math.max(0, topPercent)}%`,
+                                    height: `${Math.max(4, heightPercent)}%`
+                                  }}
+                                  className={`absolute inset-x-1.5 rounded-xl p-2.5 text-white border shadow-lg flex flex-col justify-between overflow-hidden transition-all duration-200 hover:scale-[1.01] hover:z-10 ${item.color.bg} ${item.color.border}`}
+                                >
+                                  <div>
+                                    <div className="flex items-start justify-between gap-1">
+                                      <p className="font-bold text-xs leading-tight break-words drop-shadow-sm">
+                                        {item.courseName}
+                                      </p>
+                                      <span className="font-mono text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-black/40 text-white/95 border border-white/20 whitespace-nowrap">
+                                        NRC {item.nrc}
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] font-mono text-white/80 mt-0.5">
+                                      {item.courseId} • {item.sectionName}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex items-center justify-between text-[10px] font-mono text-white/90 pt-1 border-t border-white/10 mt-1">
+                                    <span>{slot.start} - {slot.end}</span>
+                                    {item.prof && (
+                                      <span className="truncate max-w-[110px] font-sans opacity-90" title={item.prof}>
+                                        {item.prof}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            });
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
