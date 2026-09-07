@@ -1,5 +1,6 @@
 {
   "name": "generador-horarios-ucab",
+  "author": "Javier Alessandro Di Addezio",
   "private": true,
   "version": "2.0.0",
   "type": "module",

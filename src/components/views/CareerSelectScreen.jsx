@@ -3,12 +3,12 @@ import { CAREERS } from '../../constants/careers';
 
 export function CareerSelectScreen({ onSelectCareer }) {
   return (
-    <div className="min-h-screen w-full bg-[#0b0f19] flex flex-col items-center justify-center p-6 text-slate-100 font-sans relative overflow-hidden">
+    <div className="min-h-screen w-full bg-[#0b0f19] flex flex-col items-center justify-center p-4 sm:p-6 text-slate-100 font-sans relative overflow-y-auto overflow-x-hidden">
       {/* Luces de fondo decorativas */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="max-w-xl w-full text-center space-y-8 z-10">
+      <div className="max-w-xl w-full text-center space-y-6 sm:space-y-8 z-10 my-auto py-6">
         {/* Encabezado */}
         <div className="space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-semibold text-indigo-400 shadow-sm">
@@ -89,6 +89,36 @@ export function CareerSelectScreen({ onSelectCareer }) {
         <p className="text-[11px] text-slate-500">
           Podrás alternar entre carreras en cualquier momento sin perder los datos cargados de ninguna.
         </p>
+
+        {/* Firma del autor */}
+        <div className="pt-6 border-t border-slate-800/80 flex flex-col items-center justify-center space-y-2.5">
+          <div className="inline-flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-slate-900/90 via-slate-800/80 to-slate-900/90 border border-slate-800 shadow-xl shadow-black/30 hover:border-indigo-500/50 transition-all duration-300 group">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              </span>
+              <span className="text-xs text-slate-400">Hecho con dedicación por</span>
+            </div>
+            <span className="text-xs sm:text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
+              Javier Alessandro Di Addezio
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-[11px] text-slate-500">
+            <span>🎓 Para la comunidad estudiantil UCAB</span>
+            <span className="hidden sm:inline">•</span>
+            <a
+              href="https://github.com/vlessvndroo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-indigo-400 transition-colors inline-flex items-center gap-1"
+            >
+              <span>GitHub @vlessvndroo</span>
+              <span className="text-[10px]">↗</span>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

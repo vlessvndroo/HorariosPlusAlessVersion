@@ -58,7 +58,7 @@ export async function copyNrcList(currentCombination, careerName, onCopied) {
   });
 
   const titleName = (careerName || 'UCAB').toUpperCase();
-  const fullText = `HORARIO SELECCIONADO - ${titleName} (NRCs para inscripción):\nNRCs: ${pureNrcs.join(', ')}\n\nDetalle:\n${detailLines.join('\n')}`;
+  const fullText = `HORARIO SELECCIONADO - ${titleName} (NRCs para inscripción):\nNRCs: ${pureNrcs.join(', ')}\n\nDetalle:\n${detailLines.join('\n')}\n\n✨ Horarios Plus UCAB • Hecho por Javier Alessandro Di Addezio\n🔗 https://vlessvndroo.github.io/HorariosPlusAlessVersion/`;
 
   try {
     await navigator.clipboard.writeText(fullText);

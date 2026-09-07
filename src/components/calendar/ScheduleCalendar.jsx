@@ -385,6 +385,16 @@ export function ScheduleCalendar({
                       </div>
                     ))}
                   </div>
+
+                  {/* Pie de autor y marca de agua para la imagen PNG exportada */}
+                  <div className="border-t border-slate-800/80 px-4 py-2 bg-slate-950/90 flex items-center justify-between text-[11px] text-slate-400">
+                    <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                      <span>⚡</span> Horarios Plus UCAB
+                    </span>
+                    <span>
+                      Hecho por <strong className="text-indigo-300 font-semibold">Javier Alessandro Di Addezio</strong>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -11,9 +11,15 @@ export function Header({ currentCareer, onResetAllData, onChangeCareer }) {
             {currentCareer.icon}
           </span>
           <div className="min-w-0">
-            <h2 className="text-xs sm:text-sm font-bold text-white tracking-tight truncate">
-              {currentCareer.name}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xs sm:text-sm font-bold text-white tracking-tight truncate">
+                {currentCareer.name}
+              </h2>
+              <span className="hidden md:inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-900/90 border border-slate-800 text-slate-400 flex-shrink-0">
+                <span>por</span>
+                <span className="text-indigo-300 font-semibold">Javier Di Addezio</span>
+              </span>
+            </div>
             <p className="text-[10px] text-slate-400 truncate">
               {currentCareer.faculty}
             </p>
