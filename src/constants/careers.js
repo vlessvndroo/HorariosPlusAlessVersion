@@ -1,5 +1,5 @@
-import { CURRICULUM_INFORMATICA } from '../data/curricula/informatica';
-import { CURRICULUM_PSICOLOGIA } from '../data/curricula/psicologia';
+import { CURRICULUM_INFORMATICA } from '../data/curricula/informatica.js';
+import { CURRICULUM_PSICOLOGIA } from '../data/curricula/psicologia.js';
 
 export const CAREERS = {
   informatica: {

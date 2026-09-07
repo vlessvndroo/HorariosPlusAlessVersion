@@ -1,6 +1,6 @@
-import { PALETTES } from '../constants/palettes';
-import { SUNDAY_ROUND_SLOTS } from '../constants/schedule';
-import { checkConflict, slotsOverlap } from '../utils/timeUtils';
+import { PALETTES } from '../constants/palettes.js';
+import { SUNDAY_ROUND_SLOTS } from '../constants/schedule.js';
+import { checkConflict, slotsOverlap } from '../utils/timeUtils.js';
 
 /**
  * Crea una estructura de oferta por defecto según la modalidad de la materia.
