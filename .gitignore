@@ -13,6 +13,7 @@ dist-ssr/
 .env.*
 
 # Editor & OS files
+.vscode/
 .DS_Store
 Thumbs.db
 *.suo

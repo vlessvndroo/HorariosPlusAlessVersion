@@ -139,11 +139,17 @@ describe('Scheduler Engine Backtracking & Combinations', () => {
 });
 
 describe('Curricula Integrity', () => {
-  test('Informatica curriculum has 8 semesters and non-empty courses', () => {
+  test('Informatica curriculum has 8 semesters and non-empty courses with unique IDs', () => {
     assert.equal(CURRICULUM_INFORMATICA.length, 8);
+    const seenIds = new Set();
     let totalCourses = 0;
     CURRICULUM_INFORMATICA.forEach(sem => {
       assert.ok(sem.courses.length > 0);
+      sem.courses.forEach(c => {
+        assert.ok(c.id && c.id.trim().length > 0, `Course ${c.name} has invalid ID`);
+        assert.ok(!seenIds.has(c.id), `Duplicate course ID found: ${c.id}`);
+        seenIds.add(c.id);
+      });
       totalCourses += sem.courses.length;
     });
     assert.ok(totalCourses >= 45);
