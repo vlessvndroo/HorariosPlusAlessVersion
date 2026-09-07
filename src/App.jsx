@@ -23,6 +23,7 @@ export function App() {
   const [courseOffer, setCourseOffer] = useState({});
 
   const [activeTab, setActiveTab] = useState('courses');
+  const [mobileCombinationsSubTab, setMobileCombinationsSubTab] = useState('calendar'); // 'calendar' | 'details'
   const [currentIndex, setCurrentIndex] = useState(0);
   const [copiedNotification, setCopiedNotification] = useState(false);
   const [isExportingImage, setIsExportingImage] = useState(false);
@@ -55,6 +56,7 @@ export function App() {
     setCourseOffer(data.courseOffer);
     setCurrentIndex(0);
     setActiveTab('courses');
+    setMobileCombinationsSubTab('calendar');
   };
 
   const currentCareer = activeCareerId ? CAREERS[activeCareerId] : null;
@@ -356,10 +358,17 @@ export function App() {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#0b0f19] font-sans text-slate-100">
-      {/* BARRA LATERAL PRINCIPAL */}
-      <aside className="no-print w-[500px] flex-shrink-0 border-r border-slate-800/80 flex flex-col bg-[#0f172a]/95 backdrop-blur-xl z-20">
-        
+    <div className="flex flex-col lg:flex-row h-screen w-full overflow-hidden bg-[#0b0f19] font-sans text-slate-100">
+      {/* BARRA LATERAL (Desktop: panel lateral izquierdo 480px; Móvil: pantalla completa en Pasos 1 y 2, o en Detalle de Paso 3) */}
+      <aside
+        className={`no-print flex-col bg-[#0f172a]/95 backdrop-blur-xl z-20 border-r border-slate-800/80 ${
+          activeTab === 'combinations'
+            ? mobileCombinationsSubTab === 'details'
+              ? 'flex w-full h-full lg:w-[480px] xl:w-[500px] lg:flex-shrink-0'
+              : 'hidden lg:flex lg:w-[480px] xl:w-[500px] lg:flex-shrink-0'
+            : 'flex w-full h-full lg:w-[480px] xl:w-[500px] lg:flex-shrink-0'
+        }`}
+      >
         {/* Encabezado con selector de carrera y reset */}
         <Header
           currentCareer={currentCareer}
@@ -370,13 +379,36 @@ export function App() {
         {/* Pestañas de Navegación de los 3 pasos */}
         <TabNav
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            if (tab === 'combinations') setMobileCombinationsSubTab('calendar');
+          }}
           selectedCount={selectedCourses.length}
           combinationsCount={combinations.length}
         />
 
+        {/* Selector de sub-vista móvil en Paso 3: Alternar entre Horario y Resumen de NRCs */}
+        {activeTab === 'combinations' && (
+          <div className="lg:hidden px-3 py-2 bg-slate-950/90 border-b border-slate-800 flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileCombinationsSubTab('calendar')}
+              className="flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-slate-900 border border-slate-800 text-slate-300 cursor-pointer"
+            >
+              <span>📅 Ver Horario</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileCombinationsSubTab('details')}
+              className="flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-sm cursor-pointer"
+            >
+              <span>📋 Resumen y NRCs</span>
+            </button>
+          </div>
+        )}
+
         {/* Contenido de la pestaña activa */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
           {activeTab === 'courses' && (
             <CourseSelectionTab
               currentCareer={currentCareer}
@@ -397,7 +429,10 @@ export function App() {
               combinationsCount={combinations.length}
               onChangeCourseMode={changeCourseMode}
               onGoToCourses={() => setActiveTab('courses')}
-              onGoToCombinations={() => setActiveTab('combinations')}
+              onGoToCombinations={() => {
+                setActiveTab('combinations');
+                setMobileCombinationsSubTab('calendar');
+              }}
               // Standard
               onAddStandardSection={addStandardSection}
               onRemoveStandardSection={removeStandardSection}
@@ -438,23 +473,66 @@ export function App() {
         {/* Pie de Barra Lateral */}
         <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 flex items-center justify-between text-[11px] text-slate-500">
           <span>{selectedCourses.length} materias seleccionadas</span>
-          <span>{currentCareer.name} • 24h</span>
+          <span>{currentCareer.shortName} • 24h</span>
         </div>
       </aside>
 
       {/* ÁREA PRINCIPAL: CALENDARIO */}
-      <ScheduleCalendar
-        currentCareer={currentCareer}
-        selectedCourses={selectedCourses}
-        combinations={combinations}
-        currentIndex={currentIndex}
-        setCurrentIndex={setCurrentIndex}
-        currentCombination={currentCombination}
-        isExportingImage={isExportingImage}
-        onExportImage={handleExportImage}
-        onGoToCourses={() => setActiveTab('courses')}
-        onGoToNrcs={() => setActiveTab('nrcs')}
-      />
+      {/* En desktop siempre visible al lado; en móvil visible cuando activeTab === 'combinations' y mobileCombinationsSubTab === 'calendar' */}
+      <div
+        className={`flex-1 flex-col h-full overflow-hidden ${
+          activeTab === 'combinations' && mobileCombinationsSubTab === 'calendar'
+            ? 'flex w-full'
+            : 'hidden lg:flex'
+        }`}
+      >
+        {/* Barra de navegación superior exclusiva en Móvil cuando se visualiza el Horario */}
+        <div className="lg:hidden flex flex-col bg-[#0f172a]/95 border-b border-slate-800/80">
+          <Header
+            currentCareer={currentCareer}
+            onResetAllData={resetAllData}
+            onChangeCareer={() => setActiveCareerId(null)}
+          />
+          <TabNav
+            activeTab={activeTab}
+            setActiveTab={(tab) => {
+              setActiveTab(tab);
+              if (tab === 'combinations') setMobileCombinationsSubTab('calendar');
+            }}
+            selectedCount={selectedCourses.length}
+            combinationsCount={combinations.length}
+          />
+          <div className="px-3 py-2 bg-slate-950/80 border-b border-slate-800 flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileCombinationsSubTab('calendar')}
+              className="flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-sm cursor-pointer"
+            >
+              <span>📅 Ver Horario</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileCombinationsSubTab('details')}
+              className="flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-slate-900 border border-slate-800 text-slate-300 cursor-pointer"
+            >
+              <span>📋 Resumen y NRCs</span>
+            </button>
+          </div>
+        </div>
+
+        <ScheduleCalendar
+          currentCareer={currentCareer}
+          selectedCourses={selectedCourses}
+          combinations={combinations}
+          currentIndex={currentIndex}
+          setCurrentIndex={setCurrentIndex}
+          currentCombination={currentCombination}
+          isExportingImage={isExportingImage}
+          onExportImage={handleExportImage}
+          onGoToCourses={() => setActiveTab('courses')}
+          onGoToNrcs={() => setActiveTab('nrcs')}
+        />
+      </div>
     </div>
   );
 }

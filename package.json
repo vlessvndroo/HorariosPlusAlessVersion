@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test",
-    "test:demo": "node tests/live-demo.js"
+    "test:demo": "node tests/live-demo.js",
+    "test:mobile": "node tests/test-mobile-viewports.js"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
