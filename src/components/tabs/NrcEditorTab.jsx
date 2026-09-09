@@ -23,9 +23,15 @@ export function NrcEditorTab({
   onAddTheoryGroup,
   onRemoveTheoryGroup,
   onUpdateTheoryField,
+  onAddTheorySlot,
+  onRemoveTheorySlot,
+  onUpdateTheorySlot,
   onAddPracticeToTheory,
   onUpdatePracticeField,
   onRemovePracticeFromTheory,
+  onAddPracticeSlot,
+  onRemovePracticeSlot,
+  onUpdatePracticeSlot,
   // Virtual actions
   onAddVirtualSection,
   onRemoveVirtualSection,
@@ -132,9 +138,15 @@ export function NrcEditorTab({
                 onAddTheoryGroup={onAddTheoryGroup}
                 onRemoveTheoryGroup={onRemoveTheoryGroup}
                 onUpdateTheoryField={onUpdateTheoryField}
+                onAddTheorySlot={onAddTheorySlot}
+                onRemoveTheorySlot={onRemoveTheorySlot}
+                onUpdateTheorySlot={onUpdateTheorySlot}
                 onAddPracticeToTheory={onAddPracticeToTheory}
                 onUpdatePracticeField={onUpdatePracticeField}
                 onRemovePracticeFromTheory={onRemovePracticeFromTheory}
+                onAddPracticeSlot={onAddPracticeSlot}
+                onRemovePracticeSlot={onRemovePracticeSlot}
+                onUpdatePracticeSlot={onUpdatePracticeSlot}
               />
             )}
 

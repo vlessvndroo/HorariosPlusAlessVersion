@@ -118,6 +118,85 @@ describe('Scheduler Engine Backtracking & Combinations', () => {
     assert.equal(result.combinations.length, 2); // 1 theory with 2 practice options = 2 combinations
   });
 
+  test('handles theory with 2 schedule blocks and practice with 2 schedule blocks', () => {
+    const courses = [{ id: 'PSIC-02026', name: 'Estadística Descriptiva', mode: 'theory_practice' }];
+    const offer = {
+      'PSIC-02026': {
+        mode: 'theory_practice',
+        theoryGroups: [
+          {
+            theoryNrc: '15660',
+            theorySectionName: 'Teoría 1',
+            theorySchedule: [
+              { day: 'LUN', start: '07:00', end: '09:00' },
+              { day: 'MIE', start: '07:00', end: '09:00' }
+            ],
+            practices: [
+              {
+                practiceNrc: '15683',
+                practiceSectionName: 'Práctica 1',
+                practiceSchedule: [
+                  { day: 'MAR', start: '07:00', end: '09:00' },
+                  { day: 'JUE', start: '07:00', end: '09:00' }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    };
+
+    const result = computeCombinations(courses, offer);
+    assert.equal(result.combinations.length, 1);
+    const comb = result.combinations[0][0];
+    assert.equal(comb.theorySchedule.length, 2);
+    assert.equal(comb.practiceSchedule.length, 2);
+    assert.equal(comb.schedule.length, 4); // 2 theory + 2 practice = 4 total slots
+  });
+
+  test('filters out combination when 2nd practice slot collides with 2nd theory slot', () => {
+    const courses = [{ id: 'PSIC-02026', name: 'Estadística Descriptiva', mode: 'theory_practice' }];
+    const offer = {
+      'PSIC-02026': {
+        mode: 'theory_practice',
+        theoryGroups: [
+          {
+            theoryNrc: '15660',
+            theorySectionName: 'Teoría 1',
+            theorySchedule: [
+              { day: 'LUN', start: '07:00', end: '09:00' },
+              { day: 'MIE', start: '09:00', end: '11:00' }
+            ],
+            practices: [
+              // Práctica 1: choca con el 2do bloque de teoría (MIE 09:00 - 11:00)
+              {
+                practiceNrc: '15683',
+                practiceSectionName: 'Práctica 1',
+                practiceSchedule: [
+                  { day: 'MAR', start: '07:00', end: '09:00' },
+                  { day: 'MIE', start: '10:00', end: '12:00' } // overlap 10-11
+                ]
+              },
+              // Práctica 2: no choca
+              {
+                practiceNrc: '15684',
+                practiceSectionName: 'Práctica 2',
+                practiceSchedule: [
+                  { day: 'MAR', start: '07:00', end: '09:00' },
+                  { day: 'VIE', start: '07:00', end: '09:00' }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    };
+
+    const result = computeCombinations(courses, offer);
+    assert.equal(result.combinations.length, 1);
+    assert.equal(result.combinations[0][0].practiceNrc, '15684');
+  });
+
   test('places virtual courses sequentially on Sunday', () => {
     const courses = [
       { id: 'IDIO-02002', name: 'Inglés Técnico', mode: 'virtual' },

@@ -92,13 +92,19 @@ export function computeCombinations(selectedCourses, courseOffer) {
 
       groups.forEach(tg => {
         if (!tg.theoryNrc || tg.theoryNrc.trim() === '') return;
+        const tSched = (tg.theorySchedule || []).filter(s => s && s.day && s.start && s.end);
+        if (tSched.length === 0) return;
+
         (tg.practices || []).forEach(pr => {
           if (!pr.practiceNrc || pr.practiceNrc.trim() === '') return;
+          const pSched = (pr.practiceSchedule || []).filter(s => s && s.day && s.start && s.end);
+          if (pSched.length === 0) return;
 
+          const combinedSlots = [...tSched, ...pSched];
           let selfConflict = false;
-          for (const tSlot of tg.theorySchedule) {
-            for (const pSlot of pr.practiceSchedule) {
-              if (slotsOverlap(tSlot, pSlot)) {
+          for (let i = 0; i < combinedSlots.length; i++) {
+            for (let j = i + 1; j < combinedSlots.length; j++) {
+              if (slotsOverlap(combinedSlots[i], combinedSlots[j])) {
                 selfConflict = true;
                 break;
               }
@@ -113,12 +119,12 @@ export function computeCombinations(selectedCourses, courseOffer) {
               theoryNrc: tg.theoryNrc,
               theorySectionName: tg.theorySectionName,
               theoryProf: tg.theoryProf,
-              theorySchedule: tg.theorySchedule,
+              theorySchedule: tSched,
               practiceNrc: pr.practiceNrc,
               practiceSectionName: pr.practiceSectionName,
               practiceProf: pr.practiceProf,
-              practiceSchedule: pr.practiceSchedule,
-              schedule: [...tg.theorySchedule, ...pr.practiceSchedule]
+              practiceSchedule: pSched,
+              schedule: combinedSlots
             });
           }
         });

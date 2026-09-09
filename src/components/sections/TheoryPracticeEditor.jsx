@@ -7,9 +7,15 @@ export function TheoryPracticeEditor({
   onAddTheoryGroup,
   onRemoveTheoryGroup,
   onUpdateTheoryField,
+  onAddTheorySlot,
+  onRemoveTheorySlot,
+  onUpdateTheorySlot,
   onAddPracticeToTheory,
   onUpdatePracticeField,
-  onRemovePracticeFromTheory
+  onRemovePracticeFromTheory,
+  onAddPracticeSlot,
+  onRemovePracticeSlot,
+  onUpdatePracticeSlot
 }) {
   const weekDays = DAYS.filter(d => d.key !== 'DOM');
 
@@ -78,48 +84,61 @@ export function TheoryPracticeEditor({
               </div>
             </div>
 
-            {/* Horario de Teoría con HORAS REDONDAS */}
-            <div className="pt-1.5 border-t border-slate-800/80 flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-[10px] text-purple-300 font-semibold w-14">Horario:</span>
-              <select
-                value={tg.theorySchedule[0]?.day || 'LUN'}
-                onChange={(e) => {
-                  const updated = [...tg.theorySchedule];
-                  updated[0] = { ...updated[0], day: e.target.value };
-                  onUpdateTheoryField(courseId, tgIdx, 'theorySchedule', updated);
-                }}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-[11px] cursor-pointer"
-              >
-                {weekDays.map(d => (
-                  <option key={d.key} value={d.key}>{d.label}</option>
-                ))}
-              </select>
-
-              <div className="flex items-center gap-1">
-                <select
-                  value={tg.theorySchedule[0]?.start || '07:00'}
-                  onChange={(e) => {
-                    const updated = [...tg.theorySchedule];
-                    updated[0] = { ...updated[0], start: e.target.value };
-                    onUpdateTheoryField(courseId, tgIdx, 'theorySchedule', updated);
-                  }}
-                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-[11px] font-mono cursor-pointer"
+            {/* Bloques de Teoría con HORAS REDONDAS */}
+            <div className="space-y-1.5 pt-1.5 border-t border-slate-800/80">
+              <div className="flex items-center justify-between text-[10px] text-purple-300 font-medium">
+                <span>Días y Horarios de Teoría:</span>
+                <button
+                  type="button"
+                  onClick={() => onAddTheorySlot(courseId, tgIdx)}
+                  className="text-purple-400 hover:text-purple-300 font-semibold cursor-pointer transition"
                 >
-                  {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <span className="text-slate-500 font-bold">-</span>
-                <select
-                  value={tg.theorySchedule[0]?.end || '09:00'}
-                  onChange={(e) => {
-                    const updated = [...tg.theorySchedule];
-                    updated[0] = { ...updated[0], end: e.target.value };
-                    onUpdateTheoryField(courseId, tgIdx, 'theorySchedule', updated);
-                  }}
-                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-[11px] font-mono cursor-pointer"
-                >
-                  {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                  + Agregar otro día/hora
+                </button>
               </div>
+
+              {(tg.theorySchedule || []).map((slot, bIdx) => (
+                <div key={bIdx} className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex flex-wrap items-center gap-1.5 text-xs">
+                  <select
+                    value={slot.day}
+                    onChange={(e) => onUpdateTheorySlot(courseId, tgIdx, bIdx, 'day', e.target.value)}
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200 text-[11px] cursor-pointer flex-1 sm:flex-none"
+                  >
+                    {weekDays.map(d => (
+                      <option key={d.key} value={d.key}>{d.label}</option>
+                    ))}
+                  </select>
+
+                  <div className="flex items-center gap-1 flex-1 sm:flex-none justify-between sm:justify-start">
+                    <select
+                      value={slot.start}
+                      onChange={(e) => onUpdateTheorySlot(courseId, tgIdx, bIdx, 'start', e.target.value)}
+                      className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200 text-[11px] font-mono cursor-pointer"
+                    >
+                      {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <span className="text-slate-500 font-bold">-</span>
+                    <select
+                      value={slot.end}
+                      onChange={(e) => onUpdateTheorySlot(courseId, tgIdx, bIdx, 'end', e.target.value)}
+                      className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200 text-[11px] font-mono cursor-pointer"
+                    >
+                      {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+
+                  {(tg.theorySchedule || []).length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveTheorySlot(courseId, tgIdx, bIdx)}
+                      className="text-slate-500 hover:text-rose-400 p-1 ml-auto cursor-pointer transition"
+                      title="Eliminar bloque de teoría"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -194,47 +213,61 @@ export function TheoryPracticeEditor({
                   </div>
                 </div>
 
-                {/* Horario de Práctica con HORAS REDONDAS */}
-                <div className="flex flex-wrap items-center gap-1.5 text-xs pt-1.5 border-t border-slate-800/60">
-                  <select
-                    value={pr.practiceSchedule[0]?.day || 'MIE'}
-                    onChange={(e) => {
-                      const updated = [...pr.practiceSchedule];
-                      updated[0] = { ...updated[0], day: e.target.value };
-                      onUpdatePracticeField(courseId, tgIdx, prIdx, 'practiceSchedule', updated);
-                    }}
-                    className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-[11px] cursor-pointer flex-1 sm:flex-none"
-                  >
-                    {weekDays.map(d => (
-                      <option key={d.key} value={d.key}>{d.label}</option>
-                    ))}
-                  </select>
-
-                  <div className="flex items-center gap-1 flex-1 sm:flex-none justify-between sm:justify-start">
-                    <select
-                      value={pr.practiceSchedule[0]?.start || '07:00'}
-                      onChange={(e) => {
-                        const updated = [...pr.practiceSchedule];
-                        updated[0] = { ...updated[0], start: e.target.value };
-                        onUpdatePracticeField(courseId, tgIdx, prIdx, 'practiceSchedule', updated);
-                      }}
-                      className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-[11px] font-mono cursor-pointer"
+                {/* Bloques de Práctica con HORAS REDONDAS */}
+                <div className="space-y-1.5 pt-1.5 border-t border-slate-800/60">
+                  <div className="flex items-center justify-between text-[10px] text-indigo-300 font-medium">
+                    <span>Días y Horarios de Práctica:</span>
+                    <button
+                      type="button"
+                      onClick={() => onAddPracticeSlot(courseId, tgIdx, prIdx)}
+                      className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer transition"
                     >
-                      {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    <span className="text-slate-500 font-bold">-</span>
-                    <select
-                      value={pr.practiceSchedule[0]?.end || '09:00'}
-                      onChange={(e) => {
-                        const updated = [...pr.practiceSchedule];
-                        updated[0] = { ...updated[0], end: e.target.value };
-                        onUpdatePracticeField(courseId, tgIdx, prIdx, 'practiceSchedule', updated);
-                      }}
-                      className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-[11px] font-mono cursor-pointer"
-                    >
-                      {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                      + Agregar otro día/hora
+                    </button>
                   </div>
+
+                  {(pr.practiceSchedule || []).map((slot, bIdx) => (
+                    <div key={bIdx} className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex flex-wrap items-center gap-1.5 text-xs">
+                      <select
+                        value={slot.day}
+                        onChange={(e) => onUpdatePracticeSlot(courseId, tgIdx, prIdx, bIdx, 'day', e.target.value)}
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200 text-[11px] cursor-pointer flex-1 sm:flex-none"
+                      >
+                        {weekDays.map(d => (
+                          <option key={d.key} value={d.key}>{d.label}</option>
+                        ))}
+                      </select>
+
+                      <div className="flex items-center gap-1 flex-1 sm:flex-none justify-between sm:justify-start">
+                        <select
+                          value={slot.start}
+                          onChange={(e) => onUpdatePracticeSlot(courseId, tgIdx, prIdx, bIdx, 'start', e.target.value)}
+                          className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200 text-[11px] font-mono cursor-pointer"
+                        >
+                          {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <span className="text-slate-500 font-bold">-</span>
+                        <select
+                          value={slot.end}
+                          onChange={(e) => onUpdatePracticeSlot(courseId, tgIdx, prIdx, bIdx, 'end', e.target.value)}
+                          className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200 text-[11px] font-mono cursor-pointer"
+                        >
+                          {ROUND_HOURS_24H.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+
+                      {(pr.practiceSchedule || []).length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => onRemovePracticeSlot(courseId, tgIdx, prIdx, bIdx)}
+                          className="text-slate-500 hover:text-rose-400 p-1 ml-auto cursor-pointer transition"
+                          title="Eliminar bloque de práctica"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}

@@ -214,6 +214,29 @@ export function App() {
     setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
   };
 
+  const addTheorySlot = (courseId, tgIdx) => {
+    const offer = { ...courseOffer[courseId] };
+    const tg = offer.theoryGroups[tgIdx];
+    if (!tg.theorySchedule) tg.theorySchedule = [];
+    tg.theorySchedule.push({ day: 'MIE', start: '07:00', end: '09:00' });
+    setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+  };
+
+  const removeTheorySlot = (courseId, tgIdx, slotIdx) => {
+    const offer = { ...courseOffer[courseId] };
+    const tg = offer.theoryGroups[tgIdx];
+    tg.theorySchedule = (tg.theorySchedule || []).filter((_, idx) => idx !== slotIdx);
+    setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+  };
+
+  const updateTheorySlot = (courseId, tgIdx, slotIdx, field, value) => {
+    const offer = { ...courseOffer[courseId] };
+    const tg = offer.theoryGroups[tgIdx];
+    if (!tg.theorySchedule) tg.theorySchedule = [];
+    tg.theorySchedule[slotIdx] = { ...tg.theorySchedule[slotIdx], [field]: value };
+    setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+  };
+
   const addPracticeToTheory = (courseId, tgIdx) => {
     const offer = { ...courseOffer[courseId] };
     const practices = offer.theoryGroups[tgIdx].practices || [];
@@ -238,6 +261,29 @@ export function App() {
   const removePracticeFromTheory = (courseId, tgIdx, prIdx) => {
     const offer = { ...courseOffer[courseId] };
     offer.theoryGroups[tgIdx].practices = offer.theoryGroups[tgIdx].practices.filter((_, idx) => idx !== prIdx);
+    setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+  };
+
+  const addPracticeSlot = (courseId, tgIdx, prIdx) => {
+    const offer = { ...courseOffer[courseId] };
+    const pr = offer.theoryGroups[tgIdx].practices[prIdx];
+    if (!pr.practiceSchedule) pr.practiceSchedule = [];
+    pr.practiceSchedule.push({ day: 'VIE', start: '07:00', end: '09:00' });
+    setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+  };
+
+  const removePracticeSlot = (courseId, tgIdx, prIdx, slotIdx) => {
+    const offer = { ...courseOffer[courseId] };
+    const pr = offer.theoryGroups[tgIdx].practices[prIdx];
+    pr.practiceSchedule = (pr.practiceSchedule || []).filter((_, idx) => idx !== slotIdx);
+    setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
+  };
+
+  const updatePracticeSlot = (courseId, tgIdx, prIdx, slotIdx, field, value) => {
+    const offer = { ...courseOffer[courseId] };
+    const pr = offer.theoryGroups[tgIdx].practices[prIdx];
+    if (!pr.practiceSchedule) pr.practiceSchedule = [];
+    pr.practiceSchedule[slotIdx] = { ...pr.practiceSchedule[slotIdx], [field]: value };
     setCourseOffer(prev => ({ ...prev, [courseId]: offer }));
   };
 
@@ -444,9 +490,15 @@ export function App() {
               onAddTheoryGroup={addTheoryGroup}
               onRemoveTheoryGroup={removeTheoryGroup}
               onUpdateTheoryField={updateTheoryField}
+              onAddTheorySlot={addTheorySlot}
+              onRemoveTheorySlot={removeTheorySlot}
+              onUpdateTheorySlot={updateTheorySlot}
               onAddPracticeToTheory={addPracticeToTheory}
               onUpdatePracticeField={updatePracticeField}
               onRemovePracticeFromTheory={removePracticeFromTheory}
+              onAddPracticeSlot={addPracticeSlot}
+              onRemovePracticeSlot={removePracticeSlot}
+              onUpdatePracticeSlot={updatePracticeSlot}
               // Virtual
               onAddVirtualSection={addVirtualSection}
               onRemoveVirtualSection={removeVirtualSection}
